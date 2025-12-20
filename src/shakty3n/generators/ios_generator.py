@@ -1,0 +1,174 @@
+"""
+iOS Application Generator
+"""
+from typing import Dict
+from .base import CodeGenerator
+
+
+class IOSAppGenerator(CodeGenerator):
+    """Generator for iOS applications"""
+    
+    def __init__(self, ai_provider, output_dir: str):
+        super().__init__(ai_provider, output_dir)
+    
+    def generate_project(self, description: str, requirements: Dict) -> Dict:
+        """Generate an iOS application project"""
+        
+        # Generate project structure
+        structure = self._generate_structure()
+        
+        # Generate main app file
+        app_file = self._generate_app_file(description, requirements)
+        self.create_file("App.swift", app_file)
+        
+        # Generate ContentView
+        content_view = self._generate_content_view(description, requirements)
+        self.create_file("ContentView.swift", content_view)
+        
+        # Generate Info.plist
+        info_plist = self._generate_info_plist()
+        self.create_file("Info.plist", info_plist)
+        
+        # Generate README
+        readme = self._generate_readme(description)
+        self.create_file("README.md", readme)
+        
+        return {
+            "platform": "iOS",
+            "files": self.generated_files,
+            "structure": structure
+        }
+    
+    def _generate_structure(self) -> Dict:
+        """Create iOS project directory structure"""
+        dirs = [
+            "Views",
+            "Models",
+            "ViewModels",
+            "Resources",
+            "Assets.xcassets"
+        ]
+        
+        for dir_path in dirs:
+            self.create_directory(dir_path)
+        
+        return {"directories": dirs}
+    
+    def _generate_app_file(self, description: str, requirements: Dict) -> str:
+        """Generate main App.swift file"""
+        return """import SwiftUI
+
+@main
+struct MyApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
+"""
+    
+    def _generate_content_view(self, description: str, requirements: Dict) -> str:
+        """Generate ContentView.swift using AI"""
+        prompt = f"""Generate a SwiftUI ContentView for an iOS app.
+
+Description: {description}
+Requirements: {requirements}
+
+Generate a complete, functional SwiftUI view with modern best practices.
+Include necessary imports and SwiftUI components.
+Return only the Swift code, no explanations."""
+
+        system_prompt = "You are an expert iOS developer. Generate clean, modern SwiftUI code."
+        
+        response = self.ai_provider.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=0.4
+        )
+        
+        # Extract code
+        if "```swift" in response:
+            start = response.find("```swift") + 8
+            end = response.find("```", start)
+            return response[start:end].strip()
+        elif "```" in response:
+            start = response.find("```") + 3
+            end = response.find("```", start)
+            return response[start:end].strip()
+        
+        return response.strip()
+    
+    def _generate_info_plist(self) -> str:
+        """Generate Info.plist"""
+        return """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>MyApp</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <true/>
+    </dict>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+</dict>
+</plist>
+"""
+    
+    def _generate_readme(self, description: str) -> str:
+        """Generate README.md"""
+        return f"""# iOS Application
+
+{description}
+
+## Platform
+iOS (SwiftUI)
+
+## Requirements
+- Xcode 14.0 or newer
+- iOS 15.0+
+- Swift 5.7+
+
+## Setup
+
+1. Open `.xcodeproj` file in Xcode
+2. Select your development team
+3. Run on simulator or device
+
+## Build
+
+Build using Xcode or command line:
+```bash
+xcodebuild -scheme MyApp -configuration Release
+```
+
+## Generated by Shakty3n
+Autonomous Agentic Coder
+"""

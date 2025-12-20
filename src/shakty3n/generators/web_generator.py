@@ -1,0 +1,269 @@
+"""
+Web Application Generator
+"""
+from typing import Dict, Optional
+from .base import CodeGenerator
+
+
+class WebAppGenerator(CodeGenerator):
+    """Generator for web applications (React, Vue, Angular, etc.)"""
+    
+    def __init__(self, ai_provider, output_dir: str, framework: str = "react"):
+        super().__init__(ai_provider, output_dir)
+        self.framework = framework.lower()
+    
+    def generate_project(self, description: str, requirements: Dict) -> Dict:
+        """Generate a web application project"""
+        
+        # Generate project structure
+        structure = self._generate_structure()
+        
+        # Generate package.json
+        package_json = self._generate_package_json(description, requirements)
+        self.create_file("package.json", package_json)
+        
+        # Generate main files based on framework
+        if self.framework == "react":
+            self._generate_react_project(description, requirements)
+        elif self.framework == "vue":
+            self._generate_vue_project(description, requirements)
+        elif self.framework == "angular":
+            self._generate_angular_project(description, requirements)
+        else:
+            self._generate_react_project(description, requirements)
+        
+        # Generate README
+        readme = self._generate_readme(description)
+        self.create_file("README.md", readme)
+        
+        return {
+            "framework": self.framework,
+            "files": self.generated_files,
+            "structure": structure
+        }
+    
+    def _generate_structure(self) -> Dict:
+        """Create project directory structure"""
+        dirs = [
+            "src",
+            "src/components",
+            "src/styles",
+            "src/utils",
+            "src/services",
+            "public"
+        ]
+        
+        for dir_path in dirs:
+            self.create_directory(dir_path)
+        
+        return {"directories": dirs}
+    
+    def _generate_package_json(self, description: str, requirements: Dict) -> str:
+        """Generate package.json"""
+        prompt = f"""Generate a package.json file for a {self.framework} web application.
+
+Project Description: {description}
+Requirements: {requirements}
+
+Include all necessary dependencies and scripts for development and production.
+Return only the JSON content, no explanations."""
+
+        system_prompt = "You are an expert web developer. Generate valid package.json files."
+        
+        response = self.ai_provider.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=0.3
+        )
+        
+        # Extract JSON content
+        if "```json" in response:
+            start = response.find("```json") + 7
+            end = response.find("```", start)
+            return response[start:end].strip()
+        elif "```" in response:
+            start = response.find("```") + 3
+            end = response.find("```", start)
+            return response[start:end].strip()
+        
+        return response.strip()
+    
+    def _generate_react_project(self, description: str, requirements: Dict):
+        """Generate React project files"""
+        # Generate App.js
+        app_js = self._generate_component("App", description, requirements, is_main=True)
+        self.create_file("src/App.js", app_js)
+        
+        # Generate index.js
+        index_js = """import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './styles/index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+"""
+        self.create_file("src/index.js", index_js)
+        
+        # Generate basic CSS
+        css = """* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+"""
+        self.create_file("src/styles/index.css", css)
+        
+        # Generate index.html
+        html = """<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Web application" />
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
+"""
+        self.create_file("public/index.html", html)
+    
+    def _generate_vue_project(self, description: str, requirements: Dict):
+        """Generate Vue project files"""
+        # Generate App.vue
+        app_vue = """<template>
+  <div id="app">
+    <h1>{{ title }}</h1>
+    <!-- Your app content here -->
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'App',
+  data() {
+    return {
+      title: 'Vue Application'
+    }
+  }
+}
+</script>
+
+<style>
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+"""
+        self.create_file("src/App.vue", app_vue)
+        
+        # Generate main.js
+        main_js = """import { createApp } from 'vue'
+import App from './App.vue'
+
+createApp(App).mount('#app')
+"""
+        self.create_file("src/main.js", main_js)
+    
+    def _generate_angular_project(self, description: str, requirements: Dict):
+        """Generate Angular project files"""
+        # This would be expanded with full Angular structure
+        app_component = """import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent {
+  title = 'angular-app';
+}
+"""
+        self.create_file("src/app/app.component.ts", app_component)
+    
+    def _generate_component(self, name: str, description: str, 
+                           requirements: Dict, is_main: bool = False) -> str:
+        """Generate a React component using AI"""
+        prompt = f"""Generate a React component named {name}.
+
+Project Description: {description}
+Requirements: {requirements}
+Main Component: {is_main}
+
+Generate a complete, functional React component with modern best practices.
+Include necessary imports, state management, and JSX.
+Return only the JavaScript code, no explanations."""
+
+        system_prompt = "You are an expert React developer. Generate clean, modern React components."
+        
+        response = self.ai_provider.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=0.4
+        )
+        
+        # Extract code content
+        if "```javascript" in response or "```jsx" in response:
+            start = response.find("```") + 3
+            if response[start:start+10].startswith("javascript") or response[start:start+3].startswith("jsx"):
+                start = response.find("\n", start) + 1
+            end = response.find("```", start)
+            return response[start:end].strip()
+        
+        return response.strip()
+    
+    def _generate_readme(self, description: str) -> str:
+        """Generate README.md"""
+        return f"""# Web Application
+
+{description}
+
+## Framework
+{self.framework.capitalize()}
+
+## Setup
+
+```bash
+npm install
+```
+
+## Development
+
+```bash
+npm start
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+## Features
+
+- Modern {self.framework.capitalize()} application
+- Responsive design
+- Ready for deployment
+
+## Generated by Shakty3n
+Autonomous Agentic Coder
+"""
