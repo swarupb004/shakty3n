@@ -13,7 +13,8 @@ from .generators import (
     WebAppGenerator,
     AndroidAppGenerator,
     IOSAppGenerator,
-    DesktopAppGenerator
+    DesktopAppGenerator,
+    FlutterAppGenerator
 )
 from .debugger import AutoDebugger
 from .executor import AutonomousExecutor
@@ -29,6 +30,7 @@ __all__ = [
     'AndroidAppGenerator',
     'IOSAppGenerator',
     'DesktopAppGenerator',
+    'FlutterAppGenerator',
     'AutoDebugger',
     'AutonomousExecutor',
     'Config',
