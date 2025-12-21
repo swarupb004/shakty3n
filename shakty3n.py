@@ -4,6 +4,7 @@ Shakty3n - Autonomous Agentic Coder CLI
 """
 import click
 import os
+import subprocess
 import sys
 from rich.console import Console
 from rich.panel import Panel
@@ -322,6 +323,12 @@ def sandbox(env_dir, test_command, skip_install):
             console.print(f"[bold]Output:[/bold]\n{result.stdout}")
         if result.stderr:
             console.print(f"[yellow]Warnings:[/yellow]\n{result.stderr}")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]✗ Sandbox run failed: {e}[/red]")
+        if e.stdout:
+            console.print(f"[bold]Output:[/bold]\n{e.stdout}")
+        if e.stderr:
+            console.print(f"[red]Errors:[/red]\n{e.stderr}")
     except Exception as e:
         console.print(f"[red]✗ Sandbox run failed: {e}[/red]")
 
