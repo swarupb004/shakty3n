@@ -1,10 +1,14 @@
 """
 Example: Using Multiple AI Providers
 """
+import pytest
 from shakty3n import (
     AIProviderFactory,
     load_env_vars
 )
+
+# This file exercises live API calls and is disabled for automated test runs.
+pytestmark = pytest.mark.skip(reason="Integration example requires real API keys and network access")
 
 # Load environment variables
 load_env_vars()

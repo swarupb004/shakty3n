@@ -27,6 +27,7 @@ Connect with multiple AI providers:
 - Intelligent code generation with best practices
 - Automatic dependency management
 - Error detection and fixing
+- **Agent Manager & IDE workspace**: VS Code–style editor/terminal/browser access, dashboard to spawn/coordinate multiple agents, artifact tracking, and human-in-the-loop approvals
 - **Automatic test generation (NEW)** - Unit and integration tests
 - **Code validation (NEW)** - Syntax, structure, and dependency checks
 - **Sandbox testing (NEW)** - Spin up a virtual environment and run tests
@@ -367,6 +368,37 @@ ai_provider = AIProviderFactory.create_provider(
     "ollama",
     model="codellama"
 )
+
+### Agent Manager & IDE Workspace
+
+Coordinate multiple autonomous agents with a VS Code–style workspace (editor, terminal, browser stubs) and dashboard visibility:
+
+```python
+import asyncio
+from shakty3n import AgentManager
+
+async def main():
+    manager = AgentManager(base_output_dir="./generated_projects")
+    agent = manager.spawn_agent(
+        "builder",
+        provider_name="ollama",
+        model="qwen3-coder"
+    )
+
+    await manager.run_workflow(
+        agent=agent,
+        description="Create a dashboard app with charts",
+        project_type="web-react",
+        requirements={"features": ["charts", "status-board"]},
+        generate_tests=True,
+        validate_code=True,
+    )
+
+    dashboard = manager.get_dashboard_snapshot()
+    print("Artifacts:", dashboard["agents"][0]["artifacts"])
+
+asyncio.run(main())
+```
 ```
 
 ## 🤝 How It Works
