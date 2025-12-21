@@ -325,8 +325,8 @@ def sandbox(env_dir, test_command, skip_install):
         console.print(f"[green]✓ Tests completed[/green]")
     except subprocess.CalledProcessError as e:
         console.print(f"[red]✗ Sandbox run failed: {e}[/red]")
-        stdout = getattr(e, "stdout", None) or getattr(e, "output", "")
-        stderr = getattr(e, "stderr", "")
+        stdout = e.stdout or getattr(e, "output", "")
+        stderr = e.stderr or ""
         if stdout:
             console.print(f"[bold]Output:[/bold]\n{stdout}")
         if stderr:

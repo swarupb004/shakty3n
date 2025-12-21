@@ -12,8 +12,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 def test_virtual_env_creation_and_command():
     """Ensure virtual environment creation and command execution works"""
-    print("\nTesting VirtualEnvManager sandbox...")
-
     from shakty3n import VirtualEnvManager
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -25,5 +23,3 @@ def test_virtual_env_creation_and_command():
 
         result = manager.run_command(["-c", "print('sandbox-ready')"])
         assert "sandbox-ready" in result.stdout
-
-    print("✓ VirtualEnvManager can create env and run commands")
