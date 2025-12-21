@@ -111,6 +111,13 @@ npm install
 npm start
 ```
 
+### Optional: Run tests in an isolated virtual environment
+
+```bash
+# Creates .shakty3n_venv, installs deps, and runs tests/test_basic.py
+python shakty3n.py sandbox --test-command "-m pytest tests/test_basic.py"
+```
+
 ## Common Use Cases
 
 ### Create a React Web App

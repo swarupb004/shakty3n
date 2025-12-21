@@ -18,7 +18,7 @@ from .generators import (
 )
 from .debugger import AutoDebugger
 from .executor import AutonomousExecutor
-from .utils import Config, load_env_vars
+from .utils import Config, VirtualEnvManager, load_env_vars
 
 __all__ = [
     'AIProviderFactory',
@@ -34,5 +34,6 @@ __all__ = [
     'AutoDebugger',
     'AutonomousExecutor',
     'Config',
+    'VirtualEnvManager',
     'load_env_vars'
 ]
