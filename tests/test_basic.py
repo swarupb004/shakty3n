@@ -59,6 +59,7 @@ def test_local_model_recommendations():
     print("\nTesting local model recommendations...")
     try:
         from shakty3n.ai_providers import OllamaProvider
+        # Force fallback list without requiring a running Ollama daemon
         provider = OllamaProvider(base_url="http://127.0.0.1:65500")
         models = provider.get_available_models()
         assert "qwen3-coder" in models
