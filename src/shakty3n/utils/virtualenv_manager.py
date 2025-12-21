@@ -34,7 +34,7 @@ class VirtualEnvManager:
     def _build_command(self, command: Union[str, Sequence[str]]) -> Sequence[str]:
         """Compose a command that runs inside the environment."""
         if isinstance(command, str):
-            args: Iterable[str] = shlex.split(command, posix=(os.name != "nt"))
+            args: list[str] = shlex.split(command, posix=(os.name != "nt"))
         else:
             args = list(command)
         if not args:
