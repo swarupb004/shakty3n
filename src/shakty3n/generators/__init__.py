@@ -6,11 +6,13 @@ from .web_generator import WebAppGenerator
 from .android_generator import AndroidAppGenerator
 from .ios_generator import IOSAppGenerator
 from .desktop_generator import DesktopAppGenerator
+from .flutter_generator import FlutterAppGenerator
 
 __all__ = [
     'CodeGenerator',
     'WebAppGenerator',
     'AndroidAppGenerator',
     'IOSAppGenerator',
-    'DesktopAppGenerator'
+    'DesktopAppGenerator',
+    'FlutterAppGenerator'
 ]

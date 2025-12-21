@@ -7,7 +7,7 @@ import time
 from ..planner import TaskPlanner, TaskStatus
 from ..generators import (
     WebAppGenerator, AndroidAppGenerator, 
-    IOSAppGenerator, DesktopAppGenerator
+    IOSAppGenerator, DesktopAppGenerator, FlutterAppGenerator
 )
 from ..debugger import AutoDebugger
 
@@ -166,14 +166,22 @@ Provide a brief summary of what was accomplished."""
         project_output_dir = os.path.join(self.output_dir, "project")
         
         try:
-            if "web" in project_type or "react" in project_type or "vue" in project_type:
+            if "web" in project_type or "react" in project_type or "vue" in project_type or "svelte" in project_type or "next" in project_type:
                 framework = "react"
                 if "vue" in project_type:
                     framework = "vue"
                 elif "angular" in project_type:
                     framework = "angular"
+                elif "svelte" in project_type:
+                    framework = "svelte"
+                elif "next" in project_type:
+                    framework = "nextjs"
                 
                 generator = WebAppGenerator(self.ai_provider, project_output_dir, framework)
+                result = generator.generate_project(description, requirements)
+                
+            elif "flutter" in project_type:
+                generator = FlutterAppGenerator(self.ai_provider, project_output_dir)
                 result = generator.generate_project(description, requirements)
                 
             elif "android" in project_type:

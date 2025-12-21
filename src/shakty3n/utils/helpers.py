@@ -31,8 +31,8 @@ def get_api_key(provider: str) -> Optional[str]:
 def validate_project_type(project_type: str) -> bool:
     """Validate project type"""
     valid_types = [
-        "web", "react", "vue", "angular",
-        "android", "ios",
+        "web", "react", "vue", "angular", "svelte", "nextjs", "next",
+        "android", "ios", "flutter",
         "desktop", "electron", "python"
     ]
     

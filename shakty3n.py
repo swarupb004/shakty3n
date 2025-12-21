@@ -62,17 +62,29 @@ def create(description, project_type, provider, model, output, interactive):
         
         if not project_type:
             console.print("\n[bold]Select project type:[/bold]")
-            console.print("1. Web Application (React/Vue/Angular)")
-            console.print("2. Android Application")
-            console.print("3. iOS Application")
-            console.print("4. Desktop Application (Electron/Python)")
+            console.print("1. Web Application (React)")
+            console.print("2. Web Application (Vue)")
+            console.print("3. Web Application (Angular)")
+            console.print("4. Web Application (Svelte)")
+            console.print("5. Web Application (Next.js)")
+            console.print("6. Mobile Application (Android)")
+            console.print("7. Mobile Application (iOS)")
+            console.print("8. Mobile Application (Flutter - Cross-platform)")
+            console.print("9. Desktop Application (Electron)")
+            console.print("10. Desktop Application (Python)")
             
-            choice = Prompt.ask("Enter choice", choices=["1", "2", "3", "4"])
+            choice = Prompt.ask("Enter choice", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
             project_types = {
                 "1": "web-react",
-                "2": "android",
-                "3": "ios",
-                "4": "desktop-electron"
+                "2": "web-vue",
+                "3": "web-angular",
+                "4": "web-svelte",
+                "5": "web-nextjs",
+                "6": "android",
+                "7": "ios",
+                "8": "flutter",
+                "9": "desktop-electron",
+                "10": "desktop-python"
             }
             project_type = project_types[choice]
         
