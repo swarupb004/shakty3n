@@ -2,19 +2,15 @@
 """
 Tests for macOS GUI installer configuration in desktop generator
 """
-import os
-import sys
 import json
 import tempfile
+import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from shakty3n.generators.desktop_generator import DesktopAppGenerator
 
 
 def test_electron_package_json_contains_macos_installer():
     """Ensure Electron generator emits macOS DMG configuration"""
-    from shakty3n.generators import DesktopAppGenerator
-
     with tempfile.TemporaryDirectory() as tmpdir:
         generator = DesktopAppGenerator(ai_provider=None, output_dir=tmpdir, platform="electron")
         generator.generate_project("Test mac installer", {})
@@ -27,8 +23,12 @@ def test_electron_package_json_contains_macos_installer():
         assert "dist:mac" in scripts, "macOS installer script missing"
 
         mac_targets = package_json.get("build", {}).get("mac", {}).get("target", [])
-        dmg_targets = [t for t in mac_targets if isinstance(t, dict) and t.get("target") == "dmg"]
-        assert dmg_targets, "macOS DMG target not configured"
+        dmg_target = None
+        for target in mac_targets:
+            if isinstance(target, dict) and target.get("target") == "dmg":
+                dmg_target = target
+                break
+        assert dmg_target is not None, "macOS DMG target not configured"
 
-        arch_list = dmg_targets[0].get("arch", [])
+        arch_list = dmg_target.get("arch", [])
         assert "x64" in arch_list and "arm64" in arch_list, "Universal DMG arches missing"
