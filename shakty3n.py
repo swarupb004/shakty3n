@@ -42,7 +42,9 @@ def cli():
 @click.option('--model', '-m', help='AI model to use')
 @click.option('--output', '-o', help='Output directory', default='./generated_projects')
 @click.option('--interactive', '-i', is_flag=True, help='Interactive mode')
-def create(description, project_type, provider, model, output, interactive):
+@click.option('--with-tests', is_flag=True, help='Generate tests for the project')
+@click.option('--validate', is_flag=True, help='Validate the generated code')
+def create(description, project_type, provider, model, output, interactive, with_tests, validate):
     """Create a new project autonomously"""
     
     # Load environment variables
@@ -147,6 +149,8 @@ def create(description, project_type, provider, model, output, interactive):
     console.print(f"[bold]Type:[/bold] {project_type}")
     console.print(f"[bold]AI Provider:[/bold] {provider} ({model})")
     console.print(f"[bold]Output:[/bold] {output}")
+    console.print(f"[bold]Generate Tests:[/bold] {with_tests}")
+    console.print(f"[bold]Validate Code:[/bold] {validate}")
     console.print("="*60 + "\n")
     
     if not Confirm.ask("Start autonomous execution?", default=True):
@@ -158,7 +162,9 @@ def create(description, project_type, provider, model, output, interactive):
         result = executor.execute_project(
             description=description,
             project_type=project_type,
-            requirements={}
+            requirements={},
+            generate_tests=with_tests,
+            validate_code=validate
         )
         
         if result.get("success"):

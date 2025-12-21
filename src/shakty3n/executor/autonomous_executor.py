@@ -26,7 +26,8 @@ class AutonomousExecutor:
         os.makedirs(output_dir, exist_ok=True)
     
     def execute_project(self, description: str, project_type: str, 
-                       requirements: Optional[Dict] = None) -> Dict:
+                       requirements: Optional[Dict] = None, generate_tests: bool = False,
+                       validate_code: bool = False) -> Dict:
         """Execute a complete project autonomously"""
         
         print("\n" + "="*60)
@@ -100,7 +101,13 @@ class AutonomousExecutor:
         
         # Phase 3: Code Generation
         print("\n🏗️  Phase 3: Generating Code...")
-        generation_result = self._generate_code(description, project_type, requirements or {})
+        generation_result = self._generate_code(description, project_type, requirements or {}, generate_tests)
+        
+        # Phase 4: Validation (if requested)
+        validation_result = None
+        if validate_code and generation_result.get("success"):
+            print("\n✓ Phase 4: Validating Generated Code...")
+            validation_result = self._validate_code(project_type, generation_result.get("output_dir"))
         
         # Final summary
         print("\n" + "="*60)
@@ -114,6 +121,16 @@ class AutonomousExecutor:
         if generation_result.get("success"):
             print(f"\n✓ Project generated at: {generation_result['output_dir']}")
             print(f"✓ Files created: {len(generation_result.get('files', []))}")
+            if generation_result.get('details', {}).get('tests_generated'):
+                print(f"✓ Tests generated")
+        
+        if validation_result:
+            if validation_result['passed']:
+                print(f"\n✓ Validation passed")
+            else:
+                print(f"\n⚠ Validation issues found:")
+                print(f"   Errors: {validation_result['error_count']}")
+                print(f"   Warnings: {validation_result['warning_count']}")
         
         error_summary = self.debugger.get_error_summary()
         if error_summary['total_errors'] > 0:
@@ -125,6 +142,7 @@ class AutonomousExecutor:
             "plan": [task.to_dict() for task in self.planner.tasks],
             "progress": progress,
             "generation": generation_result,
+            "validation": validation_result,
             "errors": error_summary
         }
     
@@ -159,7 +177,7 @@ Provide a brief summary of what was accomplished."""
         return result
     
     def _generate_code(self, description: str, project_type: str, 
-                      requirements: Dict) -> Dict:
+                      requirements: Dict, generate_tests: bool = False) -> Dict:
         """Generate the actual code for the project"""
         
         project_type = project_type.lower()
@@ -177,11 +195,11 @@ Provide a brief summary of what was accomplished."""
                 elif "next" in project_type:
                     framework = "nextjs"
                 
-                generator = WebAppGenerator(self.ai_provider, project_output_dir, framework)
+                generator = WebAppGenerator(self.ai_provider, project_output_dir, framework, generate_tests)
                 result = generator.generate_project(description, requirements)
                 
             elif "flutter" in project_type:
-                generator = FlutterAppGenerator(self.ai_provider, project_output_dir)
+                generator = FlutterAppGenerator(self.ai_provider, project_output_dir, generate_tests)
                 result = generator.generate_project(description, requirements)
                 
             elif "android" in project_type:
@@ -230,3 +248,35 @@ Provide a brief summary of what was accomplished."""
             "plan": [],
             "progress": {"total": 0, "completed": 0, "percentage": 0}
         }
+    
+    def _validate_code(self, project_type: str, project_dir: str) -> Dict:
+        """Validate generated code"""
+        from ..validation import create_validator
+        
+        try:
+            validator = create_validator(project_type, project_dir)
+            result = validator.validate()
+            
+            # Display validation results
+            if result.errors:
+                print(f"   Errors found:")
+                for error in result.errors[:5]:  # Show first 5 errors
+                    print(f"   - {error}")
+            
+            if result.warnings:
+                print(f"   Warnings:")
+                for warning in result.warnings[:3]:  # Show first 3 warnings
+                    print(f"   - {warning}")
+            
+            return result.to_dict()
+            
+        except Exception as e:
+            print(f"   Validation error: {str(e)}")
+            return {
+                "passed": False,
+                "errors": [str(e)],
+                "warnings": [],
+                "suggestions": [],
+                "error_count": 1,
+                "warning_count": 0
+            }
