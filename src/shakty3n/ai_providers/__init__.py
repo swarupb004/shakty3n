@@ -25,7 +25,7 @@ class AIProviderFactory:
             model = model or "claude-3-opus-20240229"
             return AnthropicProvider(api_key=api_key, model=model)
         elif provider_name == "google":
-            model = model or "gemini-pro"
+            model = model or "gemini-3.0-pro"
             return GoogleProvider(api_key=api_key, model=model)
         elif provider_name == "ollama":
             model = model or "llama2"

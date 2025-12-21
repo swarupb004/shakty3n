@@ -68,4 +68,4 @@ class GoogleProvider(AIProvider):
     
     def get_available_models(self) -> List[str]:
         """Get available Google models"""
-        return ["gemini-pro", "gemini-pro-vision", "gemini-ultra"]
+        return ["gemini-3.0-pro", "gemini-pro", "gemini-pro-vision", "gemini-ultra"]
