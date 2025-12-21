@@ -74,4 +74,12 @@ class OllamaProvider(AIProvider):
             models = response.json().get("models", [])
             return [model["name"] for model in models]
         except:
-            return ["llama2", "codellama", "mistral", "mixtral"]
+            return [
+                "llama2",
+                "codellama",
+                "mistral",
+                "mixtral",
+                "qwen3-coder",
+                "qwen2.5-coder",
+                "deepseek-coder"
+            ]

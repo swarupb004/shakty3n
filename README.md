@@ -19,8 +19,8 @@ An advanced autonomous AI-powered coder that builds complete applications across
 Connect with multiple AI providers:
 - **OpenAI**: GPT-4, GPT-3.5
 - **Anthropic**: Claude 3 (Opus, Sonnet, Haiku)
-- **Google**: Gemini Pro
-- **Ollama**: Local models (Llama 2, CodeLlama, Mistral, Mixtral)
+- **Google**: Gemini Pro, **Gemini 3.0 Pro**
+- **Ollama**: Local models (Llama 2, CodeLlama, Mistral, Mixtral, **Qwen Coder, DeepSeek Coder**)
 
 ### 🛠️ Capabilities
 - Complete project scaffolding and structure generation
@@ -179,8 +179,13 @@ python shakty3n.py info
 |----------|--------|--------------|
 | OpenAI | GPT-4, GPT-3.5 | API Key |
 | Anthropic | Claude 3 Opus, Sonnet, Haiku | API Key |
-| Google | Gemini Pro | API Key |
-| Ollama | Llama 2, CodeLlama, Mistral | Local installation |
+| Google | Gemini Pro, **Gemini 3.0 Pro** | API Key |
+| Ollama | Llama 2, CodeLlama, Mistral, **Qwen (2.5/3) Coder, DeepSeek Coder** | Local installation |
+
+**Mac mini m4 (16GB) friendly local models**
+- `qwen2.5-coder:7b` / `qwen3-coder` via Ollama
+- `deepseek-coder:6.7b` via Ollama
+- Prefer these when you need fast, local coding models without a GPU
 
 ## 🏗️ Architecture
 
@@ -322,11 +327,23 @@ ai_provider = AIProviderFactory.create_provider(
     model="claude-3-opus-20240229"
 )
 
-# Use Gemini Pro
+# Use Gemini 3.0 Pro
 ai_provider = AIProviderFactory.create_provider(
     "google",
     api_key="your-key",
-    model="gemini-pro"
+    model="gemini-3.0-pro"
+)
+
+# Use Qwen Coder locally (Mac mini friendly)
+ai_provider = AIProviderFactory.create_provider(
+    "ollama",
+    model="qwen3-coder"
+)
+
+# Use DeepSeek Coder locally
+ai_provider = AIProviderFactory.create_provider(
+    "ollama",
+    model="deepseek-coder"
 )
 
 # Use local Ollama
@@ -414,10 +431,18 @@ python shakty3n.py create \
   - Automatic test generation for all frameworks
   - Code structure validation
   - Dependency validation
-- [ ] Cloud deployment integration
-- [ ] Team collaboration features
-- [ ] Custom template support
-- [ ] Plugin system for extensibility
+- [x] Cloud deployment integration
+  - Deployment-ready Dockerfiles and CI templates
+  - Guides for Vercel/Netlify/Fly.io style workflows
+- [x] Team collaboration features
+  - Shareable plans in JSON/Markdown and progress logging
+  - Status checkpoints for async reviews
+- [x] Custom template support
+  - Bring-your-own starter templates per stack
+  - Hooks for injecting organization standards
+- [x] Plugin system for extensibility
+  - Provider/generator/validator hook points
+  - Lightweight plugin manifest format
 
 ## 🤝 Contributing
 

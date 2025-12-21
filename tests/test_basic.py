@@ -54,6 +54,22 @@ def test_ai_provider_factory():
         return False
 
 
+def test_local_model_recommendations():
+    """Ensure local model suggestions include new coder models"""
+    print("\nTesting local model recommendations...")
+    try:
+        from shakty3n.ai_providers import OllamaProvider
+        provider = OllamaProvider(base_url="http://127.0.0.1:0")
+        models = provider.get_available_models()
+        assert "qwen3-coder" in models
+        assert "deepseek-coder" in models
+        print(f"✓ Local models include: {', '.join(models)}")
+        return True
+    except Exception as e:
+        print(f"✗ Local model recommendation test failed: {e}")
+        return False
+
+
 def test_task_planner():
     """Test task planner (without AI)"""
     print("\nTesting Task Planner...")
@@ -168,6 +184,7 @@ def run_all_tests():
     tests = [
         test_imports,
         test_ai_provider_factory,
+        test_local_model_recommendations,
         test_task_planner,
         test_config,
         test_code_generator_structure,

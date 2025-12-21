@@ -27,8 +27,8 @@ shakty3n/
 **Supported Providers:**
 - **OpenAI**: GPT-4, GPT-3.5-turbo
 - **Anthropic**: Claude 3 (Opus, Sonnet, Haiku)
-- **Google**: Gemini Pro
-- **Ollama**: Local models (Llama 2, CodeLlama, Mistral, etc.)
+- **Google**: Gemini Pro, Gemini 3.0 Pro
+- **Ollama**: Local models (Llama 2, CodeLlama, Mistral, Qwen/DeepSeek coders, etc.)
 
 **Features:**
 - Abstract provider interface

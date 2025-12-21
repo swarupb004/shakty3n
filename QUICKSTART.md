@@ -39,19 +39,20 @@ DEFAULT_MODEL=claude-3-opus-20240229
 # OR for Google
 GOOGLE_API_KEY=your-key-here
 DEFAULT_AI_PROVIDER=google
-DEFAULT_MODEL=gemini-pro
+DEFAULT_MODEL=gemini-3.0-pro
 ```
 
 ### Option C: Use Local Models (No API Key Required)
 Install Ollama first: https://ollama.ai
 
 ```bash
-# Pull a model
-ollama pull llama2
+# Pull a model (Mac mini m4 16GB friendly options)
+ollama pull qwen3-coder   # or qwen2.5-coder:7b
+ollama pull deepseek-coder
 
 # Then use it with Shakty3n
 DEFAULT_AI_PROVIDER=ollama
-DEFAULT_MODEL=llama2
+DEFAULT_MODEL=qwen3-coder
 ```
 
 ## Step 3: Test Connection
