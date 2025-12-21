@@ -205,6 +205,10 @@ dev_dependencies:
 class TestGenerator:
     """Main test generator class"""
     
+    # Framework constants
+    WEB_JS_FRAMEWORKS = ['react', 'vue', 'angular', 'svelte', 'nextjs']
+    DART_FRAMEWORKS = ['flutter']
+    
     def __init__(self, framework: str):
         self.framework = framework.lower()
         self.template = self._get_template()
@@ -222,21 +226,49 @@ class TestGenerator:
         
         return templates.get(self.framework, ReactTestTemplate())
     
+    def _get_test_file_extension(self) -> str:
+        """Get the test file extension based on framework"""
+        if self.framework in self.DART_FRAMEWORKS:
+            return "_test.dart"
+        else:
+            return ".test.js"
+    
+    def _get_integration_test_name(self) -> str:
+        """Get the integration test filename based on framework"""
+        if self.framework in self.DART_FRAMEWORKS:
+            return "integration_test.dart"
+        else:
+            return "integration.test.js"
+    
+    def _get_config_filename(self) -> str:
+        """Get the test config filename based on framework"""
+        if self.framework == 'react':
+            return "jest.config.json"
+        elif self.framework == 'vue':
+            return "vitest.config.js"
+        elif self.framework in self.DART_FRAMEWORKS:
+            return "test_config.txt"
+        else:
+            return "jest.config.json"
+    
     def generate_tests(self, components: List[str], description: str) -> Dict[str, str]:
         """Generate tests for multiple components"""
         tests = {}
         
+        # Get file extension
+        test_extension = self._get_test_file_extension()
+        
         # Generate unit tests
         for component in components:
-            test_name = f"{component}.test.js" if self.framework in ['react', 'vue', 'angular', 'svelte', 'nextjs'] else f"{component}_test.dart"
+            test_name = f"{component}{test_extension}"
             tests[test_name] = self.template.generate_unit_test(component, description)
         
         # Generate integration test
-        integration_test_name = "integration.test.js" if self.framework in ['react', 'vue', 'angular', 'svelte', 'nextjs'] else "integration_test.dart"
+        integration_test_name = self._get_integration_test_name()
         tests[integration_test_name] = self.template.generate_integration_test("Main Feature", description)
         
         # Generate test config
-        config_name = "jest.config.json" if self.framework == 'react' else "vitest.config.js" if self.framework == 'vue' else "test_config.txt"
+        config_name = self._get_config_filename()
         tests[config_name] = self.template.get_test_config()
         
         return tests

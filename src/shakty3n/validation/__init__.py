@@ -272,35 +272,86 @@ class SyntaxValidator:
     """Syntax validator for different languages"""
     
     @staticmethod
-    def validate_javascript(code: str) -> List[str]:
-        """Basic JavaScript syntax validation"""
+    def _count_brackets_outside_strings(code: str, open_bracket: str, close_bracket: str) -> tuple:
+        """Count brackets outside of strings and comments (basic implementation)"""
+        in_string = False
+        in_comment = False
+        string_char = None
+        open_count = 0
+        close_count = 0
+        i = 0
+        
+        while i < len(code):
+            char = code[i]
+            
+            # Skip line comments
+            if not in_string and i < len(code) - 1 and code[i:i+2] == '//':
+                # Skip to end of line
+                while i < len(code) and code[i] != '\n':
+                    i += 1
+                continue
+            
+            # Skip block comments
+            if not in_string and i < len(code) - 1 and code[i:i+2] == '/*':
+                # Skip to end of comment
+                while i < len(code) - 1:
+                    if code[i:i+2] == '*/':
+                        i += 2
+                        break
+                    i += 1
+                continue
+            
+            # Track strings
+            if char in ['"', "'", '`'] and (i == 0 or code[i-1] != '\\'):
+                if not in_string:
+                    in_string = True
+                    string_char = char
+                elif char == string_char:
+                    in_string = False
+                    string_char = None
+            
+            # Count brackets outside strings and comments
+            if not in_string and not in_comment:
+                if char == open_bracket:
+                    open_count += 1
+                elif char == close_bracket:
+                    close_count += 1
+            
+            i += 1
+        
+        return open_count, close_count
+    
+    @staticmethod
+    def _validate_brackets(code: str) -> List[str]:
+        """Validate bracket matching for code"""
         errors = []
         
-        # Check for common syntax errors
-        if code.count('{') != code.count('}'):
-            errors.append("Mismatched curly braces")
+        # Check curly braces
+        open_count, close_count = SyntaxValidator._count_brackets_outside_strings(code, '{', '}')
+        if open_count != close_count:
+            errors.append(f"Mismatched curly braces ({open_count} open, {close_count} close)")
         
-        if code.count('(') != code.count(')'):
-            errors.append("Mismatched parentheses")
+        # Check parentheses
+        open_count, close_count = SyntaxValidator._count_brackets_outside_strings(code, '(', ')')
+        if open_count != close_count:
+            errors.append(f"Mismatched parentheses ({open_count} open, {close_count} close)")
         
-        if code.count('[') != code.count(']'):
-            errors.append("Mismatched square brackets")
+        # Check square brackets
+        open_count, close_count = SyntaxValidator._count_brackets_outside_strings(code, '[', ']')
+        if open_count != close_count:
+            errors.append(f"Mismatched square brackets ({open_count} open, {close_count} close)")
         
         return errors
     
     @staticmethod
+    def validate_javascript(code: str) -> List[str]:
+        """Basic JavaScript syntax validation"""
+        return SyntaxValidator._validate_brackets(code)
+    
+    @staticmethod
     def validate_dart(code: str) -> List[str]:
         """Basic Dart syntax validation"""
-        errors = []
-        
-        # Check for common syntax errors
-        if code.count('{') != code.count('}'):
-            errors.append("Mismatched curly braces")
-        
-        if code.count('(') != code.count(')'):
-            errors.append("Mismatched parentheses")
-        
-        return errors
+        return SyntaxValidator._validate_brackets(code)
 
 
 def create_validator(project_type: str, project_dir: str) -> CodeValidator:
