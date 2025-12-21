@@ -13,7 +13,7 @@ An advanced autonomous AI-powered coder that builds complete applications across
 ### 🌐 Multi-Platform Support
 - **Web Applications**: React, Vue, Angular, **Svelte, Next.js**
 - **Mobile Apps**: Android (Kotlin, Java), iOS (Swift, SwiftUI), **Flutter (Cross-platform)**
-- **Desktop Apps**: Electron, Python (tkinter)
+- **Desktop Apps**: Electron, Python (tkinter) with macOS DMG installer script
 
 ### 🤖 AI Model Integration
 Connect with multiple AI providers:
