@@ -3,8 +3,12 @@
 Tests for macOS GUI installer configuration in desktop generator
 """
 import json
+import sys
 import tempfile
 import os
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from shakty3n.generators.desktop_generator import DesktopAppGenerator
 
