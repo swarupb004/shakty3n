@@ -459,6 +459,12 @@ python shakty3n.py create \
 - [x] Plugin system for extensibility
   - Provider/generator/validator hook points
   - Lightweight plugin manifest format
+- [ ] Graphical UI for project orchestration
+  - Visual flow to plan, launch, and monitor autonomous builds
+  - Cross-platform desktop shell for Windows/macOS/Linux
+- [ ] Installer generation for iOS apps and Windows desktop builds
+  - iOS IPA/TestFlight packaging guidance
+  - Windows desktop installers (MSI/EXE) for Electron/Python outputs
 
 ## 🤝 Contributing
 
