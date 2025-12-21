@@ -27,12 +27,7 @@ class VirtualEnvManager:
 
     def create(self, recreate: bool = True) -> str:
         """Create the virtual environment."""
-        if recreate and os.path.exists(self.env_dir):
-            # venv with clear=True removes existing files safely
-            builder = venv.EnvBuilder(with_pip=self.with_pip, clear=True)
-        else:
-            builder = venv.EnvBuilder(with_pip=self.with_pip)
-
+        builder = venv.EnvBuilder(with_pip=self.with_pip, clear=recreate)
         builder.create(self.env_dir)
         return self.env_dir
 
