@@ -275,7 +275,6 @@ class SyntaxValidator:
     def _count_brackets_outside_strings(code: str, open_bracket: str, close_bracket: str) -> tuple:
         """Count brackets outside of strings and comments (basic implementation)"""
         in_string = False
-        in_comment = False
         string_char = None
         open_count = 0
         close_count = 0
@@ -289,6 +288,9 @@ class SyntaxValidator:
                 # Skip to end of line
                 while i < len(code) and code[i] != '\n':
                     i += 1
+                # Move past the newline if we found one
+                if i < len(code):
+                    i += 1
                 continue
             
             # Skip block comments
@@ -301,17 +303,26 @@ class SyntaxValidator:
                     i += 1
                 continue
             
-            # Track strings
-            if char in ['"', "'", '`'] and (i == 0 or code[i-1] != '\\'):
-                if not in_string:
-                    in_string = True
-                    string_char = char
-                elif char == string_char:
-                    in_string = False
-                    string_char = None
+            # Track strings - count number of preceding backslashes
+            if char in ['"', "'", '`']:
+                # Count consecutive backslashes before this character
+                num_backslashes = 0
+                j = i - 1
+                while j >= 0 and code[j] == '\\':
+                    num_backslashes += 1
+                    j -= 1
+                
+                # If even number of backslashes (or zero), the quote is not escaped
+                if num_backslashes % 2 == 0:
+                    if not in_string:
+                        in_string = True
+                        string_char = char
+                    elif char == string_char:
+                        in_string = False
+                        string_char = None
             
-            # Count brackets outside strings and comments
-            if not in_string and not in_comment:
+            # Count brackets outside strings
+            if not in_string:
                 if char == open_bracket:
                     open_count += 1
                 elif char == close_bracket:

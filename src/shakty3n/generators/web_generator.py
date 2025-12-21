@@ -285,8 +285,8 @@ function MyApp({ Component, pageProps }) {
 
 export default MyApp
 """
-        self_dirs = ["pages", "pages/api", "styles", "public"]
-        for dir_path in self_dirs:
+        dirs = ["pages", "pages/api", "styles", "public"]
+        for dir_path in dirs:
             self.create_directory(dir_path)
         
         self.create_file("pages/_app.js", app_js)
