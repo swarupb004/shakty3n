@@ -29,6 +29,7 @@ Connect with multiple AI providers:
 - Error detection and fixing
 - **Automatic test generation (NEW)** - Unit and integration tests
 - **Code validation (NEW)** - Syntax, structure, and dependency checks
+- **Sandbox testing (NEW)** - Spin up a virtual environment and run tests
 - Testing framework setup
 - Documentation generation
 
@@ -151,6 +152,9 @@ python shakty3n.py configure
 
 # Test AI provider connection
 python shakty3n.py test [--provider PROVIDER]
+
+# Create a sandboxed virtual environment and run tests
+python shakty3n.py sandbox [--env-dir .shakty3n_venv] [--test-command "-m pytest tests/test_basic.py"]
 
 # Show information
 python shakty3n.py info
@@ -281,6 +285,18 @@ python shakty3n.py create \
 - Errors: Critical issues that need fixing
 - Warnings: Potential problems
 - Suggestions: Best practice recommendations
+
+### Sandboxed Test Runs
+
+Create an isolated virtual environment and run Shakty3n's tests without touching your global Python setup:
+
+```bash
+# Create .shakty3n_venv, install dependencies, and run tests
+python shakty3n.py sandbox --test-command "-m pytest tests/test_basic.py"
+
+# Skip dependency installation if you already installed everything
+python shakty3n.py sandbox --skip-install
+```
 
 ## 🔧 Advanced Usage
 

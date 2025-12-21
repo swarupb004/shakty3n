@@ -16,6 +16,7 @@ from shakty3n import (
     AIProviderFactory,
     AutonomousExecutor,
     Config,
+    VirtualEnvManager,
     load_env_vars
 )
 from shakty3n.utils import validate_project_type
@@ -282,6 +283,47 @@ def test(provider):
         
     except Exception as e:
         console.print(f"[red]✗ Connection failed: {e}[/red]")
+
+
+@cli.command()
+@click.option('--env-dir', default='.shakty3n_venv', help='Virtual environment directory')
+@click.option('--test-command', default='-m pytest tests/test_basic.py', help='Command to run inside the environment')
+@click.option('--skip-install', is_flag=True, help='Skip installing dependencies into the environment')
+def sandbox(env_dir, test_command, skip_install):
+    """Create a virtual environment and run tests there"""
+    console.print(Panel.fit(
+        "[bold cyan]Shakty3n Sandbox[/bold cyan]\n\n"
+        "Creates an isolated virtual environment and runs tests inside it.",
+        border_style="cyan"
+    ))
+
+    manager = VirtualEnvManager(env_dir)
+
+    try:
+        console.print(f"\n[cyan]Creating virtual environment at {env_dir}...[/cyan]")
+        manager.create()
+        console.print(f"[green]✓ Virtual environment ready ({manager.python_path})[/green]")
+
+        if not skip_install:
+            if os.path.exists("requirements.txt"):
+                console.print("[cyan]Installing requirements...[/cyan]")
+                manager.install_requirements("requirements.txt")
+            console.print("[cyan]Installing pytest...[/cyan]")
+            manager.run_command(["-m", "pip", "install", "pytest"])
+            console.print("[cyan]Installing shakty3n in editable mode...[/cyan]")
+            manager.install_local_package(editable=True)
+        else:
+            console.print("[yellow]Skipping dependency installation[/yellow]")
+
+        console.print("\n[cyan]Running tests inside the sandbox...[/cyan]")
+        result = manager.run_command(test_command)
+        console.print(f"[green]✓ Tests completed[/green]")
+        if result.stdout:
+            console.print(f"[bold]Output:[/bold]\n{result.stdout}")
+        if result.stderr:
+            console.print(f"[yellow]Warnings:[/yellow]\n{result.stderr}")
+    except Exception as e:
+        console.print(f"[red]✗ Sandbox run failed: {e}[/red]")
 
 
 @cli.command()
