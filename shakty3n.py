@@ -317,15 +317,12 @@ def sandbox(env_dir, test_command, skip_install):
             console.print("[yellow]Skipping dependency installation[/yellow]")
 
         console.print("\n[cyan]Running tests inside the sandbox...[/cyan]")
-        result = manager.run_command(test_command, check=False)
+        result = manager.run_command(test_command)
         if result.stdout:
             console.print(f"[bold]Output:[/bold]\n{result.stdout}")
         if result.stderr:
             console.print(f"[yellow]Warnings:[/yellow]\n{result.stderr}")
-        if result.returncode == 0:
-            console.print(f"[green]✓ Tests completed[/green]")
-        else:
-            console.print(f"[red]✗ Tests failed with exit code {result.returncode}[/red]")
+        console.print(f"[green]✓ Tests completed[/green]")
     except subprocess.CalledProcessError as e:
         console.print(f"[red]✗ Sandbox run failed: {e}[/red]")
         stdout = getattr(e, "stdout", None) or getattr(e, "output", "")

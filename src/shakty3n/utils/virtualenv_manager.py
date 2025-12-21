@@ -34,9 +34,11 @@ class VirtualEnvManager:
     def _build_command(self, command: Union[str, Sequence[str]]) -> Sequence[str]:
         """Compose a command that runs inside the environment."""
         if isinstance(command, str):
-            args: Iterable[str] = shlex.split(command)
+            args: Iterable[str] = shlex.split(command, posix=True)
         else:
-            args = command
+            args = list(command)
+        if not args:
+            raise ValueError("Command must not be empty")
         return [self.python_path, *args]
 
     def run_command(
@@ -59,6 +61,8 @@ class VirtualEnvManager:
 
     def install_requirements(self, requirements_path: str) -> subprocess.CompletedProcess:
         """Install dependencies from a requirements file inside the environment."""
+        if not os.path.exists(requirements_path):
+            raise FileNotFoundError(f"Requirements file not found: {requirements_path}")
         return self.run_command(["-m", "pip", "install", "-r", requirements_path])
 
     def install_local_package(self, editable: bool = True) -> subprocess.CompletedProcess:
