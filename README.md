@@ -11,9 +11,8 @@ An advanced autonomous AI-powered coder that builds complete applications across
 - **Progress Tracking**: Real-time progress monitoring and reporting
 
 ### 🌐 Multi-Platform Support
-- **Web Applications**: React, Vue, Angular
-- **Android Apps**: Kotlin, Java
-- **iOS Apps**: Swift, SwiftUI
+- **Web Applications**: React, Vue, Angular, **Svelte, Next.js**
+- **Mobile Apps**: Android (Kotlin, Java), iOS (Swift, SwiftUI), **Flutter (Cross-platform)**
 - **Desktop Apps**: Electron, Python (tkinter)
 
 ### 🤖 AI Model Integration
@@ -28,6 +27,8 @@ Connect with multiple AI providers:
 - Intelligent code generation with best practices
 - Automatic dependency management
 - Error detection and fixing
+- **Automatic test generation (NEW)** - Unit and integration tests
+- **Code validation (NEW)** - Syntax, structure, and dependency checks
 - Testing framework setup
 - Documentation generation
 
@@ -117,6 +118,21 @@ python shakty3n.py create \
   --description "A task manager with reminders" \
   --type desktop-electron \
   --provider openai
+
+# Create a Flutter cross-platform app with tests
+python shakty3n.py create \
+  --description "A fitness tracker with charts" \
+  --type flutter \
+  --provider openai \
+  --with-tests
+
+# Create a Next.js app with validation
+python shakty3n.py create \
+  --description "A blog platform with CMS" \
+  --type web-nextjs \
+  --provider anthropic \
+  --with-tests \
+  --validate
 ```
 
 ## 📖 Usage Guide
@@ -147,10 +163,13 @@ python shakty3n.py info
 | `web-react` | React web application | React, JavaScript, HTML/CSS |
 | `web-vue` | Vue web application | Vue.js, JavaScript, HTML/CSS |
 | `web-angular` | Angular web application | Angular, TypeScript, HTML/CSS |
+| `web-svelte` | Svelte web application | Svelte, JavaScript, HTML/CSS |
+| `web-nextjs` | Next.js web application | Next.js, React, TypeScript |
 | `android` | Android application | Kotlin/Java, Android SDK |
 | `android-kotlin` | Android app (Kotlin) | Kotlin, Android SDK |
 | `android-java` | Android app (Java) | Java, Android SDK |
 | `ios` | iOS application | Swift, SwiftUI |
+| `flutter` | Cross-platform mobile app | Flutter, Dart |
 | `desktop-electron` | Electron desktop app | Electron, JavaScript, HTML/CSS |
 | `desktop-python` | Python desktop app | Python, tkinter |
 
@@ -180,20 +199,83 @@ Shakty3n consists of several integrated modules:
    - Progress tracking
 
 3. **Code Generators** (`generators/`)
-   - Web application generator
+   - Web application generator (React, Vue, Angular, Svelte, Next.js)
    - Android application generator
    - iOS application generator
+   - Flutter application generator
    - Desktop application generator
 
-4. **Auto Debugger** (`debugger/`)
+4. **Test Generator** (`testing/`)
+   - Automatic test generation
+   - Unit test templates
+   - Integration test templates
+   - Framework-specific test configurations
+
+5. **Code Validator** (`validation/`)
+   - Syntax validation
+   - Structure validation
+   - Dependency validation
+   - Security checks
+
+6. **Auto Debugger** (`debugger/`)
    - Error detection and analysis
    - Automatic fix generation
    - Code validation
 
-5. **Autonomous Executor** (`executor/`)
+7. **Autonomous Executor** (`executor/`)
    - Orchestrates the entire process
    - Manages task execution
    - Coordinates all modules
+
+## 🧪 Testing & Validation
+
+### Automatic Test Generation
+
+Generate tests automatically for your projects:
+
+```bash
+# Generate project with tests
+python shakty3n.py create \
+  --description "Your project description" \
+  --type web-react \
+  --with-tests
+```
+
+**Supported Test Frameworks:**
+- **React/Next.js**: Jest + React Testing Library
+- **Vue**: Vitest + Vue Test Utils
+- **Flutter**: Flutter Test + Integration Test
+- **Angular/Svelte**: Jest
+
+**Generated Tests Include:**
+- Unit tests for components
+- Integration tests for workflows
+- Test configuration files
+- Setup instructions in TESTING.md
+
+### Code Validation
+
+Validate your generated code:
+
+```bash
+# Generate and validate project
+python shakty3n.py create \
+  --description "Your project description" \
+  --type flutter \
+  --validate
+```
+
+**Validation Checks:**
+- ✓ Project structure validation
+- ✓ Required file presence
+- ✓ Syntax validation (basic)
+- ✓ Dependency consistency
+- ✓ Configuration file validity
+
+**Validation Results:**
+- Errors: Critical issues that need fixing
+- Warnings: Potential problems
+- Suggestions: Best practice recommendations
 
 ## 🔧 Advanced Usage
 
@@ -324,8 +406,14 @@ python shakty3n.py create \
 
 ## 🛣️ Roadmap
 
-- [ ] Support for more frameworks (Svelte, Next.js, Flutter)
-- [ ] Built-in testing and validation
+- [x] **Support for more frameworks (Svelte, Next.js, Flutter)** ✅
+  - Svelte web framework
+  - Next.js web framework  
+  - Flutter cross-platform mobile apps
+- [x] **Built-in testing and validation** ✅
+  - Automatic test generation for all frameworks
+  - Code structure validation
+  - Dependency validation
 - [ ] Cloud deployment integration
 - [ ] Team collaboration features
 - [ ] Custom template support
