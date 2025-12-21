@@ -5,6 +5,7 @@ Agent manager and workspace tests.
 import asyncio
 import os
 import pytest
+from typing import Any, Generator, List, Optional
 
 from shakty3n.agent_manager import AgentManager, AgentWorkspace
 from shakty3n.ai_providers.base import AIProvider
@@ -13,7 +14,9 @@ from shakty3n.ai_providers.base import AIProvider
 class MockAIProvider(AIProvider):
     """Deterministic provider used for offline tests."""
 
-    def generate(self, prompt, system_prompt=None, temperature: float = 0.7, max_tokens: int = 4000) -> str:  # type: ignore[override]
+    def generate(
+        self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 4000
+    ) -> str:
         if "package.json" in prompt:
             return '{"name":"demo-app","version":"1.0.0","scripts":{"start":"echo start"},"dependencies":{}}'
         if "Create a detailed development plan" in prompt or "development plan" in prompt:
@@ -24,10 +27,12 @@ class MockAIProvider(AIProvider):
             return "Task executed successfully."
         return "Mock response"
 
-    def stream_generate(self, prompt, system_prompt=None, temperature: float = 0.7, max_tokens: int = 4000):  # type: ignore[override]
+    def stream_generate(
+        self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 4000
+    ) -> Generator[str, None, None]:
         yield self.generate(prompt, system_prompt=system_prompt, temperature=temperature, max_tokens=max_tokens)
 
-    def get_available_models(self):  # type: ignore[override]
+    def get_available_models(self) -> List[str]:
         return ["mock-model"]
 
 

@@ -9,12 +9,15 @@ Provides:
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import shlex
+import shutil
 import subprocess
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Union
 
 from .ai_providers import AIProviderFactory
@@ -30,10 +33,6 @@ class Artifact:
     uri: str
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
-
-    def to_dict(self) -> Dict[str, Any]:
-        data = asdict(self)
-        return data
 
 
 @dataclass
@@ -55,11 +54,15 @@ class HumanApproval:
 class AgentWorkspace:
     """Lightweight IDE experience (editor, terminal, filesystem, browser stubs)."""
 
-    def __init__(self, root_dir: str):
+    def __init__(self, root_dir: str, allowed_commands: Optional[Sequence[str]] = None):
         self.root_dir = root_dir
         self.artifacts: List[Artifact] = []
         self.events: List[Dict[str, Any]] = []
         self.approvals: List[HumanApproval] = []
+        self.allowed_commands = set(
+            allowed_commands
+            or ["echo", "python", "python3", "pip", "pip3", "pytest", "npm", "yarn", "pnpm", "ls", "pwd", "git"]
+        )
         os.makedirs(root_dir, exist_ok=True)
 
     def _record_event(self, kind: str, message: str, extra: Optional[Dict[str, Any]] = None) -> None:
@@ -71,9 +74,19 @@ class AgentWorkspace:
         }
         self.events.append(event)
 
+    def _resolve_path(self, relative_path: str) -> str:
+        """Resolve and validate that a path stays inside the workspace root."""
+        root = Path(self.root_dir).resolve()
+        candidate = (root / relative_path).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError:
+            raise ValueError("Path escapes workspace root")
+        return str(candidate)
+
     def open_file(self, relative_path: str) -> str:
         """Simulate editor read access."""
-        full_path = os.path.join(self.root_dir, relative_path)
+        full_path = self._resolve_path(relative_path)
         with open(full_path, "r", encoding="utf-8") as handle:
             content = handle.read()
         self._record_event("editor_read", f"Opened {relative_path}")
@@ -81,7 +94,7 @@ class AgentWorkspace:
 
     def save_file(self, relative_path: str, content: str) -> str:
         """Simulate editor write access."""
-        full_path = os.path.join(self.root_dir, relative_path)
+        full_path = self._resolve_path(relative_path)
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         with open(full_path, "w", encoding="utf-8") as handle:
             handle.write(content)
@@ -96,6 +109,21 @@ class AgentWorkspace:
             cmd = shlex.split(command)
         else:
             cmd = list(command)
+
+        if not cmd:
+            raise ValueError("Command must not be empty")
+
+        executable = cmd[0]
+        if os.sep in executable or (os.altsep and os.altsep in executable):
+            raise ValueError("Executable path must not contain directory separators")
+
+        resolved_executable = shutil.which(executable)
+        if not resolved_executable:
+            raise ValueError(f"Command '{executable}' not found on PATH")
+
+        executable_name = os.path.basename(resolved_executable)
+        if executable_name not in self.allowed_commands:
+            raise ValueError(f"Command '{executable}' not permitted in workspace terminal")
 
         result = subprocess.run(
             cmd,
@@ -121,9 +149,9 @@ class AgentWorkspace:
         return artifact
 
     def capture_screenshot(self, name: str, content: str = "Screenshot placeholder") -> Artifact:
-        screenshots_dir = os.path.join(self.root_dir, "artifacts", "screenshots")
+        screenshots_dir = self._resolve_path(os.path.join("artifacts", "screenshots"))
         os.makedirs(screenshots_dir, exist_ok=True)
-        path = os.path.join(screenshots_dir, f"{name}.txt")
+        path = self._resolve_path(os.path.join("artifacts", "screenshots", f"{name}.txt"))
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(content)
         self._record_event("screenshot", f"Captured {name}", {"path": path})
@@ -165,9 +193,6 @@ class AgentSession:
     status: str = "idle"
     last_result: Optional[Dict[str, Any]] = None
 
-    def record_artifact(self, artifact_type: str, uri: str, metadata: Optional[Dict[str, Any]] = None) -> Artifact:
-        return self.workspace.add_artifact(artifact_type, uri, metadata)
-
     def request_approval(self, summary: str, changes: Dict[str, Any]) -> HumanApproval:
         return self.workspace.request_approval(summary, changes)
 
@@ -182,7 +207,7 @@ class AgentManager:
 
     def spawn_agent(
         self,
-        name: str,
+        name: Optional[str] = None,
         provider_name: str = "openai",
         model: Optional[str] = None,
         ai_provider: Optional[AIProvider] = None,
@@ -190,7 +215,8 @@ class AgentManager:
     ) -> AgentSession:
         """Create a new agent with its own workspace and executor."""
         agent_id = str(uuid.uuid4())
-        agent_output_dir = output_dir or os.path.join(self.base_output_dir, name or agent_id)
+        agent_dir_name = name if name else agent_id
+        agent_output_dir = output_dir or os.path.join(self.base_output_dir, agent_dir_name)
 
         provider = ai_provider or AIProviderFactory.create_provider(provider_name, model=model)
         executor = AutonomousExecutor(provider, output_dir=agent_output_dir)
@@ -198,7 +224,7 @@ class AgentManager:
 
         session = AgentSession(
             id=agent_id,
-            name=name,
+            name=name or agent_dir_name,
             executor=executor,
             workspace=workspace,
             provider_name=provider_name,
@@ -220,27 +246,37 @@ class AgentManager:
         agent.status = "running"
         agent.workspace._record_event("workflow_started", description, {"project_type": project_type})
 
-        result = await asyncio.to_thread(
-            agent.executor.execute_project,
-            description,
-            project_type,
-            requirements or {},
-            generate_tests,
-            validate_code,
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: agent.executor.execute_project(
+                description=description,
+                project_type=project_type,
+                requirements=requirements or {},
+                generate_tests=generate_tests,
+                validate_code=validate_code,
+            ),
         )
 
         agent.status = "completed" if result.get("success") else "failed"
         agent.last_result = result
-        agent.record_artifact("plan", "plan.json", {"plan": result.get("plan", [])})
+        plan_rel_path = os.path.join("artifacts", "plans", f"{agent.id}.json")
+        plan_path = agent.workspace._resolve_path(plan_rel_path)
+        os.makedirs(os.path.dirname(plan_path), exist_ok=True)
+        with open(plan_path, "w", encoding="utf-8") as handle:
+            json.dump(result.get("plan", []), handle, indent=2)
+        agent.workspace.add_artifact("plan", plan_path, {"plan": result.get("plan", [])})
 
         generation = result.get("generation", {})
         if generation.get("output_dir"):
-            agent.record_artifact("code", generation["output_dir"], generation)
+            agent.workspace.add_artifact("code", generation["output_dir"], generation)
 
         validation = result.get("validation")
         if validation:
             artifact_type = "test_results" if validation.get("passed") else "validation"
-            agent.record_artifact(artifact_type, generation.get("output_dir", agent.executor.output_dir), validation)
+            agent.workspace.add_artifact(
+                artifact_type, generation.get("output_dir", agent.executor.output_dir), validation
+            )
 
         agent.workspace._record_event("workflow_finished", agent.status, {"progress": result.get("progress", {})})
         return result
@@ -273,7 +309,7 @@ class AgentManager:
                     "status": session.status,
                     "provider": session.provider_name,
                     "model": session.model,
-                    "artifacts": [artifact.to_dict() for artifact in session.workspace.artifacts],
+                    "artifacts": [asdict(artifact) for artifact in session.workspace.artifacts],
                     "approvals": [
                         {
                             "id": approval.id,
