@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+websockets
+python-multipart
+pydantic
+requests
+openai
+anthropic
+google-generativeai
