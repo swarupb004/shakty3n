@@ -21,6 +21,11 @@ interface FileNode {
     path: string;
 }
 
+type DashboardAgent = {
+    id: string | number;
+    name?: string;
+};
+
 type RecentAgent = {
     id: string;
     name: string;
@@ -96,7 +101,9 @@ export default function AgentWorkspace() {
         const fetchName = async () => {
             try {
                 const dashboard = await api.get("/api/dashboard");
-                const match = (dashboard?.agents || []).find((agent: any) => String(agent.id) === String(id));
+                const match = (dashboard?.agents as DashboardAgent[] || []).find(
+                    (agent) => String(agent.id) === String(id)
+                );
                 const resolvedName = match?.name || `Agent ${String(id).slice(0, 8)}`;
                 setAgentName(resolvedName);
                 recordRecentAgent(resolvedName);
@@ -217,7 +224,9 @@ export default function AgentWorkspace() {
                         <div className="flex items-center gap-2 text-xs">
                             <span className="text-neutral-500">{currentFile ? 'Editing' : 'Workspace'}</span>
                             <ChevronRight className="w-3 h-3 text-neutral-700" />
-                            <span className="text-white font-mono">{currentFile || agentName || "No file open"}</span>
+                            <span className="text-white font-mono">
+                                {currentFile || (agentName ? `${agentName} - No file open` : "No file open")}
+                            </span>
                         </div>
                         <div>
                             <button
