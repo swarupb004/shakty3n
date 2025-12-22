@@ -22,7 +22,7 @@ interface FileNode {
 }
 
 type DashboardAgent = {
-    id: string | number;
+    id: string;
     name?: string;
 };
 
@@ -69,12 +69,14 @@ export default function AgentWorkspace() {
 
     const recordRecentAgent = (name: string) => {
         const agentId = String(id);
-        const updated: RecentAgent[] = [
-            { id: agentId, name, lastOpened: Date.now() },
-            ...loadRecentAgents().filter((item) => item.id !== agentId),
-        ].slice(0, 5);
-        persistRecentAgents(updated);
-        setRecentAgents(updated);
+        setRecentAgents((current) => {
+            const updated: RecentAgent[] = [
+                { id: agentId, name, lastOpened: Date.now() },
+                ...current.filter((item) => item.id !== agentId),
+            ].slice(0, 5);
+            persistRecentAgents(updated);
+            return updated;
+        });
     };
 
     // Load Files
