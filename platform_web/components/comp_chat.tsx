@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Bot, User, Play, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2 } from "lucide-react";
 import { api, cn } from "@/lib/utils";
 
 interface Message {

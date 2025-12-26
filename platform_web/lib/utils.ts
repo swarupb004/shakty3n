@@ -13,7 +13,7 @@ export const api = {
     if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
     return res.json();
   },
-  post: async (endpoint: string, body: any) => {
+  post: async (endpoint: string, body: Record<string, unknown>) => {
     const res = await fetch(`${API_BASE}${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

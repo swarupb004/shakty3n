@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Editor from "@monaco-editor/react";
 import dynamic from 'next/dynamic';
@@ -65,9 +65,10 @@ export default function AgentWorkspace() {
     const [files, setFiles] = useState<FileNode[]>([]);
     const [currentFile, setCurrentFile] = useState<string | null>(null);
     const [fileContent, setFileContent] = useState("");
-    const [recentAgents, setRecentAgents] = useState<RecentAgent[]>([]);
+    const recentAgentsInitial = useMemo(() => loadRecentAgents(), []);
+    const [recentAgents, setRecentAgents] = useState<RecentAgent[]>(recentAgentsInitial);
 
-    const recordRecentAgent = (name: string) => {
+    const recordRecentAgent = useCallback((name: string) => {
         const agentId = String(id);
         setRecentAgents((current) => {
             const updated: RecentAgent[] = [
@@ -77,29 +78,30 @@ export default function AgentWorkspace() {
             persistRecentAgents(updated);
             return updated;
         });
-    };
+    }, [id]);
 
     // Load Files
-    const loadFiles = async () => {
+    const loadFiles = useCallback(async () => {
         try {
             const data = await api.get(`/api/agents/${id}/workspace/files`);
             setFiles(Array.isArray(data) ? data : [data]);
         } catch (e) {
             console.error("Failed to load files", e);
         }
-    };
-
-    useEffect(() => {
-        if (id) {
-            loadFiles();
-            const interval = setInterval(loadFiles, 10000);
-            return () => clearInterval(interval);
-        }
     }, [id]);
 
     useEffect(() => {
         if (!id) return;
-        setRecentAgents(loadRecentAgents());
+        const refreshFiles = () => {
+            loadFiles().catch(() => {});
+        };
+        refreshFiles();
+        const interval = setInterval(refreshFiles, 10000);
+        return () => clearInterval(interval);
+    }, [id, loadFiles]);
+
+    useEffect(() => {
+        if (!id) return;
         const fetchName = async () => {
             try {
                 const dashboard = await api.get("/api/dashboard");
@@ -116,7 +118,7 @@ export default function AgentWorkspace() {
             }
         };
         fetchName();
-    }, [id]);
+    }, [id, recordRecentAgent]);
 
     // Handlers
     const handleFileClick = async (file: FileNode) => {
@@ -127,8 +129,8 @@ export default function AgentWorkspace() {
             const data = await api.get(`/api/agents/${id}/workspace/content?path=${file.path}`);
             setFileContent(data.content);
             setCurrentFile(file.path);
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
         }
     };
 
@@ -139,7 +141,7 @@ export default function AgentWorkspace() {
                 content: fileContent
             });
             alert("Saved!");
-        } catch (e) {
+        } catch {
             alert("Error saving file");
         }
     };
@@ -152,7 +154,7 @@ export default function AgentWorkspace() {
                 path: name
             });
             loadFiles();
-        } catch (e) { alert("Failed to create folder"); }
+        } catch { alert("Failed to create folder"); }
     };
 
     return (
