@@ -56,7 +56,7 @@ export default function Dashboard() {
       setNewAgentName("");
       setShowModal(false);
       refresh();
-    } catch (e) {
+    } catch {
       alert("Failed to create agent. Ensure backend is running and keys are set.");
     }
   };

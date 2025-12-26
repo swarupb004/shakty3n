@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Terminal as XTerm } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
@@ -39,7 +39,6 @@ export default function AgentTerminal({ agentId }: AgentTerminalProps) {
         term.writeln("Connected to agent environment...");
         term.writeln("$ ");
 
-        // @ts-ignore
         instanceRef.current = term;
 
         const resizeObserver = new ResizeObserver(() => fitAddon.fit());
@@ -55,7 +54,7 @@ export default function AgentTerminal({ agentId }: AgentTerminalProps) {
                 } else if (data.kind === 'workflow_started') {
                     term.writeln(`\r\n\x1b[32m[Workflow Started]\x1b[0m ${data.message}\r\n`);
                 }
-            } catch (e) {
+            } catch {
                 // ignore
             }
         };
