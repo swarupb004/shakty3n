@@ -154,11 +154,107 @@ python shakty3n.py configure
 # Test AI provider connection
 python shakty3n.py test [--provider PROVIDER]
 
+# Start the API server for web UI
+python shakty3n.py serve [--host 0.0.0.0] [--port 8000] [--reload]
+
 # Create a sandboxed virtual environment and run tests
 python shakty3n.py sandbox [--env-dir .shakty3n_venv] [--test-command "-m pytest tests/test_basic.py"]
 
 # Show information
 python shakty3n.py info
+```
+
+### Project Types
+
+| Type | Description | Technologies |
+|------|-------------|--------------|
+| `web-react` | React web application | React, JavaScript, HTML/CSS |
+| `web-vue` | Vue web application | Vue.js, JavaScript, HTML/CSS |
+| `web-angular` | Angular web application | Angular, TypeScript, HTML/CSS |
+| `web-svelte` | Svelte web application | Svelte, JavaScript, HTML/CSS |
+| `web-nextjs` | Next.js web application | Next.js, React, TypeScript |
+| `android` | Android application | Kotlin/Java, Android SDK |
+| `android-kotlin` | Android app (Kotlin) | Kotlin, Android SDK |
+| `android-java` | Android app (Java) | Java, Android SDK |
+| `ios` | iOS application | Swift, SwiftUI |
+| `flutter` | Cross-platform mobile app | Flutter, Dart |
+| `desktop-electron` | Electron desktop app | Electron, JavaScript, HTML/CSS |
+| `desktop-python` | Python desktop app | Python, tkinter |
+
+## 🌐 Web UI
+
+Shakty3n now includes a graphical web interface for project orchestration!
+
+> **📸 Screenshots/Demo**
+> 
+> - Project Dashboard with real-time status updates
+> - Visual project creation form with all options
+> - Live log streaming during execution
+> - One-click artifact download
+> 
+> _Screenshots and demo GIFs coming soon!_
+
+### Starting the Web UI
+
+#### Option 1: Using Docker Compose (Recommended)
+```bash
+# Make sure you have .env file configured with API keys
+docker-compose up
+```
+
+Then open:
+- Web UI: http://localhost:3000
+- API Docs: http://localhost:8000/docs
+
+#### Option 2: Running Manually
+```bash
+# Terminal 1: Start the API server
+python shakty3n.py serve
+
+# Terminal 2: Start the web UI
+cd platform_web
+npm install
+npm run dev
+```
+
+Then open http://localhost:3000
+
+### Features
+
+- **📋 Project Dashboard**: View all your projects at a glance
+- **➕ Create Projects**: Visual form to create new projects
+- **📊 Real-time Monitoring**: Watch logs stream in real-time
+- **⬇️ Download Artifacts**: Download generated projects as ZIP files
+- **🔄 Retry Failed Projects**: Automatically retry failed builds
+- **🌓 Dark Mode**: Built-in dark theme support
+
+### API Endpoints
+
+The REST API is available at `http://localhost:8000`:
+
+- `POST /api/projects` - Create and start a new project
+- `GET /api/projects` - List all projects
+- `GET /api/projects/{id}` - Get project details
+- `GET /api/projects/{id}/logs` - Stream logs via SSE
+- `GET /api/projects/{id}/artifact` - Download project artifact
+- `POST /api/projects/{id}/retry` - Retry a failed project
+- `DELETE /api/projects/{id}` - Delete a project
+
+API documentation: http://localhost:8000/docs
+
+### Environment Variables
+
+Add to your `.env` file:
+
+```env
+# Optional: API authentication token
+API_AUTH_TOKEN=your_secret_token_here
+
+# Optional: Database path (default: shakty3n_projects.db)
+DB_PATH=shakty3n_projects.db
+
+# For web UI (optional, defaults to http://localhost:8000)
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ### Project Types
@@ -490,9 +586,12 @@ python shakty3n.py create \
 - [x] Plugin system for extensibility
   - Provider/generator/validator hook points
   - Lightweight plugin manifest format
-- [ ] Graphical UI for project orchestration
-  - Visual flow to plan, launch, and monitor autonomous builds
-  - Cross-platform desktop shell for Windows/macOS/Linux
+- [x] **Graphical UI for project orchestration** ✅
+  - Web-based UI for creating and monitoring projects
+  - Real-time log streaming and status updates
+  - SQLite persistence for project runs
+  - Docker-compose setup for easy deployment
+  - RESTful API with SSE support
 - [ ] Installer generation for iOS apps and Windows desktop builds
   - iOS IPA/TestFlight packaging guidance
   - Windows desktop installers (MSI/EXE) for Electron/Python outputs

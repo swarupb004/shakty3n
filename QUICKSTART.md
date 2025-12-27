@@ -88,7 +88,57 @@ python shakty3n.py create \
   --provider openai
 ```
 
-## Step 5: View Your Generated Project
+## Step 5: Create Projects
+
+### Option A: Web UI (Recommended)
+
+Start the web interface for a visual experience:
+
+```bash
+# Start the API server
+python shakty3n.py serve
+
+# In another terminal, start the web UI
+cd platform_web
+npm install
+npm run dev
+```
+
+Then open http://localhost:3000 and:
+1. Click "New Project"
+2. Fill in the project description
+3. Select project type and AI provider
+4. Click "Create Project"
+5. Watch real-time logs and download when complete
+
+**Or use Docker Compose:**
+```bash
+docker-compose up
+```
+Then open http://localhost:3000
+
+### Option B: Command Line
+
+#### Interactive Mode (Easiest)
+```bash
+python shakty3n.py create --interactive
+```
+
+Follow the prompts:
+1. What do you want to build?
+2. Select project type (Web/Android/iOS/Desktop)
+3. Select AI provider
+
+#### Command Line Mode
+```bash
+# Example: Create a todo app
+python shakty3n.py create \
+  --description "A todo list with categories and priorities" \
+  --type web-react \
+  --provider openai
+```
+
+## Step 6: View Your Generated Project
 
 After creation completes:
 

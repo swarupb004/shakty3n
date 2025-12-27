@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export const api = {
   get: async (endpoint: string) => {
@@ -22,4 +22,16 @@ export const api = {
     if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
     return res.json();
   },
+  delete: async (endpoint: string) => {
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+    return res.json();
+  },
 };
+
+// SSE (Server-Sent Events) helper for log streaming
+export function createEventSource(endpoint: string): EventSource {
+  return new EventSource(`${API_BASE}${endpoint}`);
+}
