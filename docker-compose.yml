@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - DEFAULT_AI_PROVIDER=${DEFAULT_AI_PROVIDER:-openai}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-4}
+      - API_AUTH_TOKEN=${API_AUTH_TOKEN:-}
+      - DB_PATH=/data/shakty3n_projects.db
+    volumes:
+      - ./generated_projects:/app/generated_projects
+      - ./project_logs:/app/project_logs
+      - api_data:/data
+    networks:
+      - shakty3n-network
+
+  web:
+    build:
+      context: ./platform_web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - shakty3n-network
+
+volumes:
+  api_data:
+
+networks:
+  shakty3n-network:
+    driver: bridge

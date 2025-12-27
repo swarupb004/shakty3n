@@ -16,7 +16,11 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 from shakty3n.agent_manager import AgentManager, AgentSession
-from shakty3n import load_env_vars
+from shakty3n import load_env_vars, Config
+
+# Import project API
+from .database import ProjectDatabase
+from .projects import router as projects_router, init_project_api
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -24,16 +28,30 @@ logger = logging.getLogger("platform_api")
 
 # Global State
 agent_manager: Optional[AgentManager] = None
+project_db: Optional[ProjectDatabase] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    global agent_manager
+    global agent_manager, project_db
     logger.info("Initializing AgentManager...")
     load_env_vars() # Load .env file
+    
+    # Initialize config
+    config = Config()
+    
     # Store agents in a persistent directory relative to project root
     base_output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "generated_projects")
     agent_manager = AgentManager(base_output_dir=base_output_dir)
+    
+    # Initialize project database
+    db_path = os.getenv("DB_PATH", "shakty3n_projects.db")
+    logger.info(f"Initializing ProjectDatabase at {db_path}...")
+    project_db = ProjectDatabase(db_path)
+    
+    # Initialize project API with database and config
+    init_project_api(project_db, config)
+    
     yield
     # Shutdown
     logger.info("Shutting down...")
@@ -48,6 +66,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(projects_router)
 
 # --- Pydantic Models ---
 

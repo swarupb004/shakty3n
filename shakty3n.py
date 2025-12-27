@@ -362,5 +362,44 @@ def info():
     ))
 
 
+@cli.command()
+@click.option('--host', default='0.0.0.0', help='Host to bind to')
+@click.option('--port', default=8000, type=int, help='Port to bind to')
+@click.option('--reload', is_flag=True, help='Enable auto-reload')
+def serve(host, port, reload):
+    """Start the Shakty3n API server"""
+    
+    console.print(Panel.fit(
+        "[bold cyan]Shakty3n API Server[/bold cyan]\n\n"
+        "Starting FastAPI server for project orchestration...",
+        border_style="cyan"
+    ))
+    
+    # Check if platform_api exists
+    api_dir = os.path.join(os.path.dirname(__file__), 'platform_api')
+    if not os.path.exists(api_dir):
+        console.print("[red]Error: platform_api directory not found[/red]")
+        return
+    
+    console.print(f"\n[cyan]Server will start at:[/cyan] http://{host}:{port}")
+    console.print(f"[cyan]API documentation:[/cyan] http://{host}:{port}/docs")
+    console.print(f"[cyan]Health check:[/cyan] http://{host}:{port}/health\n")
+    
+    try:
+        import uvicorn
+        uvicorn.run(
+            "platform_api.main:app",
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info"
+        )
+    except ImportError:
+        console.print("[red]Error: uvicorn not installed[/red]")
+        console.print("Install with: pip install uvicorn")
+    except Exception as e:
+        console.print(f"[red]Error starting server: {e}[/red]")
+
+
 if __name__ == "__main__":
     cli()

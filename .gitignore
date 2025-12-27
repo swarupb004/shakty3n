@@ -24,9 +24,25 @@ wheels/
 venv/
 env/
 ENV/
+.shakty3n_venv/
 
 # Environment variables
 .env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+project_logs/
+
+# Generated projects
+generated_projects/
+
+# Temporary files
+/tmp/
 
 # IDE
 .vscode/
