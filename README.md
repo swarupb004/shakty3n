@@ -185,6 +185,15 @@ python shakty3n.py info
 
 Shakty3n now includes a graphical web interface for project orchestration!
 
+> **📸 Screenshots/Demo**
+> 
+> - Project Dashboard with real-time status updates
+> - Visual project creation form with all options
+> - Live log streaming during execution
+> - One-click artifact download
+> 
+> _Screenshots and demo GIFs coming soon!_
+
 ### Starting the Web UI
 
 #### Option 1: Using Docker Compose (Recommended)
