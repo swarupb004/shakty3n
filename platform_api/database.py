@@ -171,7 +171,7 @@ class ProjectDatabase:
             if status in [ProjectStatus.DONE, ProjectStatus.FAILED]:
                 updates.append("completed_at = CURRENT_TIMESTAMP")
             
-            if error_message:
+            if error_message is not None:
                 updates.append("error_message = ?")
                 params.append(error_message)
             

@@ -177,6 +177,12 @@ async def get_project_logs(
             for _ in range(30):  # Wait up to 30 seconds
                 await asyncio.sleep(1)
                 updated_project = db.get_project(project_id)
+                if not updated_project:
+                    yield {
+                        "event": "error",
+                        "data": "Project not found"
+                    }
+                    return
                 log_file = updated_project.get("log_file")
                 if log_file and os.path.exists(log_file):
                     break
@@ -206,6 +212,12 @@ async def get_project_logs(
                 
                 # Check if project is complete
                 updated_project = db.get_project(project_id)
+                if not updated_project:
+                    yield {
+                        "event": "error",
+                        "data": "Project deleted"
+                    }
+                    break
                 if updated_project["status"] in [ProjectStatus.DONE, ProjectStatus.FAILED]:
                     yield {
                         "event": "status",
@@ -301,8 +313,8 @@ async def retry_project(
     if project["status"] != ProjectStatus.FAILED:
         raise HTTPException(status_code=400, detail="Can only retry failed projects")
     
-    # Reset status
-    db.update_status(project_id, ProjectStatus.PLANNING, error_message=None)
+    # Reset status and clear error message
+    db.update_status(project_id, ProjectStatus.PLANNING, error_message="")
     
     # Start execution in background
     asyncio.create_task(
@@ -313,7 +325,7 @@ async def retry_project(
             provider=project["provider"],
             model=project.get("model"),
             with_tests=project["with_tests"],
-            validate=project["validate"]
+            validate=project["validate_code"]
         )
     )
     
