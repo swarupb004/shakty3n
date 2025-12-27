@@ -18,7 +18,8 @@ from shakty3n import Config
 @pytest.fixture
 def test_db():
     """Create a test database"""
-    db_path = "/tmp/test_shakty3n.db"
+    import tempfile
+    db_path = os.path.join(tempfile.gettempdir(), "test_shakty3n.db")
     # Remove existing test db
     if os.path.exists(db_path):
         os.remove(db_path)

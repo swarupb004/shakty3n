@@ -8,6 +8,7 @@ import uuid
 import shutil
 import zipfile
 import logging
+import tempfile
 from typing import Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
@@ -250,7 +251,7 @@ async def download_artifact(
     
     # Create zip if directory
     if os.path.isdir(artifact_path):
-        zip_path = f"/tmp/{project_id}.zip"
+        zip_path = os.path.join(tempfile.gettempdir(), f"{project_id}.zip")
         
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(artifact_path):
