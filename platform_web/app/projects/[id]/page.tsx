@@ -26,7 +26,7 @@ interface Project {
   model: string | null;
   status: string;
   with_tests: boolean;
-  validate: boolean;
+  validate_code: boolean;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -285,12 +285,12 @@ export default function ProjectDetailPage() {
                   Tests
                 </span>
               )}
-              {project.validate && (
+              {project.validate_code && (
                 <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
                   Validate
                 </span>
               )}
-              {!project.with_tests && !project.validate && (
+              {!project.with_tests && !project.validate_code && (
                 <span className="text-gray-500 dark:text-gray-400 text-sm">None</span>
               )}
             </div>

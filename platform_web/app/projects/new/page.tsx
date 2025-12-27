@@ -55,7 +55,7 @@ export default function NewProjectPage() {
         provider,
         model,
         with_tests: withTests,
-        validate,
+        validate_code: validate,
       });
 
       // Redirect to project detail page

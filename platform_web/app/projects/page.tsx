@@ -14,7 +14,7 @@ interface Project {
   model: string | null;
   status: string;
   with_tests: boolean;
-  validate: boolean;
+  validate_code: boolean;
   created_at: string;
   updated_at: string;
   completed_at: string | null;

@@ -60,7 +60,7 @@ class CreateProjectRequest(BaseModel):
     provider: str = "openai"
     model: Optional[str] = None
     with_tests: bool = False
-    validate: bool = False
+    validate_code: bool = False
 
 
 class ProjectResponse(BaseModel):
@@ -71,7 +71,7 @@ class ProjectResponse(BaseModel):
     model: Optional[str]
     status: str
     with_tests: bool
-    validate: bool
+    validate_code: bool
     created_at: str
     updated_at: str
     completed_at: Optional[str]
@@ -99,7 +99,7 @@ async def create_project(
         provider=request.provider,
         model=request.model,
         with_tests=request.with_tests,
-        validate=request.validate
+        validate=request.validate_code
     )
     
     # Start execution in background
@@ -111,7 +111,7 @@ async def create_project(
             provider=request.provider,
             model=request.model,
             with_tests=request.with_tests,
-            validate=request.validate
+            validate=request.validate_code
         )
     )
     
