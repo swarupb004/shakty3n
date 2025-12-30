@@ -20,6 +20,17 @@ from .debugger import AutoDebugger
 from .executor import AutonomousExecutor
 from .utils import Config, VirtualEnvManager, load_env_vars
 from .agent_manager import AgentManager, AgentWorkspace, AgentSession
+from .autonomy import (
+    IntentSpec,
+    IntentAnalyzer,
+    ArchitectureBlueprint,
+    ArchitectureDesigner,
+    AutonomyMemory,
+    ExecutionObserver,
+    SecurityGuard,
+    CollaborativeOrchestrator,
+    CICDOrchestrator,
+)
 
 __all__ = [
     'AIProviderFactory',
@@ -39,5 +50,14 @@ __all__ = [
     'load_env_vars',
     'AgentManager',
     'AgentWorkspace',
-    'AgentSession'
+    'AgentSession',
+    'IntentSpec',
+    'IntentAnalyzer',
+    'ArchitectureBlueprint',
+    'ArchitectureDesigner',
+    'AutonomyMemory',
+    'ExecutionObserver',
+    'SecurityGuard',
+    'CollaborativeOrchestrator',
+    'CICDOrchestrator'
 ]

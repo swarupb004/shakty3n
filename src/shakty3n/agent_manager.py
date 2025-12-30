@@ -278,6 +278,28 @@ class AgentManager:
             json.dump(result.get("plan", []), handle, indent=2)
         agent.workspace.add_artifact("plan", plan_path, {"plan": result.get("plan", [])})
 
+        observability = result.get("observability")
+        if observability:
+            obs_rel_path = os.path.join("artifacts", "observability", f"{agent.id}.json")
+            obs_path = agent.workspace._resolve_path(obs_rel_path)
+            os.makedirs(os.path.dirname(obs_path), exist_ok=True)
+            with open(obs_path, "w", encoding="utf-8") as handle:
+                json.dump(observability, handle, indent=2)
+            agent.workspace.add_artifact(
+                "observability",
+                obs_path,
+                {"confidence": observability.get("confidence"), "timeline": observability.get("timeline", [])},
+            )
+
+        security = result.get("security")
+        if security:
+            sec_rel_path = os.path.join("artifacts", "security", f"{agent.id}.json")
+            sec_path = agent.workspace._resolve_path(sec_rel_path)
+            os.makedirs(os.path.dirname(sec_path), exist_ok=True)
+            with open(sec_path, "w", encoding="utf-8") as handle:
+                json.dump(security, handle, indent=2)
+            agent.workspace.add_artifact("security", sec_path, security)
+
         generation = result.get("generation", {})
         if generation.get("output_dir"):
             agent.workspace.add_artifact("code", generation["output_dir"], generation)
@@ -288,6 +310,13 @@ class AgentManager:
             agent.workspace.add_artifact(
                 artifact_type, generation.get("output_dir", agent.executor.output_dir), validation
             )
+
+        # Human-in-the-loop gate for risky runs
+        confidence = result.get("confidence", 100)
+        if confidence < 60 or (security and (security.get("issues") or security.get("secrets"))):
+            summary = "Approval required: low confidence or security findings"
+            changes = {"confidence": confidence, "security": security}
+            agent.workspace.request_approval(summary, changes)
 
         agent.workspace._record_event("workflow_finished", agent.status, {"progress": result.get("progress", {})})
         return result

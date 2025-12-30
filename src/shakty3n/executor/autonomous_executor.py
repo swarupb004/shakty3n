@@ -12,6 +12,15 @@ from ..generators import (
     StaticHTMLGenerator
 )
 from ..debugger import AutoDebugger
+from ..autonomy import (
+    IntentAnalyzer,
+    AutonomyMemory,
+    ExecutionObserver,
+    SecurityGuard,
+    ArchitectureDesigner,
+    CollaborativeOrchestrator,
+    CICDOrchestrator,
+)
 
 
 # Keywords that indicate a simple static HTML request
@@ -56,22 +65,36 @@ class AutonomousExecutor:
     
     def __init__(self, ai_provider, output_dir: str = "./generated_projects"):
         self.ai_provider = ai_provider
-        self.output_dir = output_dir
+        self.output_dir = os.path.abspath(output_dir)
+        os.makedirs(self.output_dir, exist_ok=True)
+        self.artifacts_dir = os.path.join(self.output_dir, "artifacts")
+        os.makedirs(self.artifacts_dir, exist_ok=True)
         self.planner = TaskPlanner(ai_provider)
         self.debugger = AutoDebugger(ai_provider)
         self.on_log = None
+        self.intent_analyzer = IntentAnalyzer(ai_provider)
+        self.memory = AutonomyMemory(os.path.join(self.artifacts_dir, "memory.json"))
+        self.observer = ExecutionObserver()
+        self.security_guard = SecurityGuard()
+        self.architect = ArchitectureDesigner(ai_provider)
+        self.collaborator = CollaborativeOrchestrator()
+        self.cicd = CICDOrchestrator()
+        self.retry_counts: Dict[int, int] = {}
         
         # Initialize tools
         from .tools import ToolRegistry
-        self.tools = ToolRegistry(output_dir)
-        
-        # Create output directory
-        os.makedirs(output_dir, exist_ok=True)
+        self.tools = ToolRegistry(self.output_dir)
         
     def _log(self, message: str):
         print(message)
         if self.on_log:
             self.on_log(message)
+
+    def _analyze_intent(self, description: str, requirements: Dict) -> "IntentSpec":
+        intent = self.intent_analyzer.analyze(description, requirements)
+        self.memory.remember_decision("Intent analyzed", {"success_criteria": intent.success_criteria})
+        self.memory.set_preference("project_description", description)
+        return intent
 
     def execute_project(self, description: str, project_type: str, 
                        requirements: Optional[Dict] = None, generate_tests: bool = False,
@@ -82,15 +105,27 @@ class AutonomousExecutor:
         self._log("\n" + "="*60)
         self._log("ANTIGRAVITY AGENT - Starting Execution")
         self._log("="*60 + "\n")
+
+        self.observer.start("intent_understanding")
+        intent = self._analyze_intent(description, requirements or {})
+        architecture = self.architect.design(intent, project_type)
+        team = self.collaborator.build_team(intent)
+        self.intent = intent
+        self.architecture = architecture
+        self.team = team
+        self.observer.finish("intent_understanding", {"success_criteria": len(intent.success_criteria)})
         
         # Phase 1: Planning
         self._log("📋 Phase 1: Planning...")
+        self.observer.start("planning")
         try:
             tasks = self.planner.create_plan(description, project_type)
             self._log(f"✓ Plan created with {len(tasks)} tasks")
             self._log(self.planner.get_plan_summary())
+            self.memory.remember_decision("Plan created", {"task_count": len(tasks)})
         except Exception as e:
             return self._handle_error("Planning", str(e))
+        self.observer.finish("planning", {"tasks": len(tasks)})
         
         # Phase 2: Execution (ReAct Loop)
         self._log("\n⚡ Phase 2: Autonomous Intent Execution...")
@@ -109,7 +144,9 @@ class AutonomousExecutor:
             
             self._log(f"\n▶ Executing Task {task.id}: {task.title}")
             self.planner.update_task_status(task.id, TaskStatus.IN_PROGRESS)
+            self.observer.record("task", "started", {"task_id": task.id, "title": task.title})
             
+            heal = False
             try:
                 # ReAct Loop for single task
                 success = self._execute_react_task(task, description)
@@ -117,23 +154,61 @@ class AutonomousExecutor:
                 if success:
                     self.planner.update_task_status(task.id, TaskStatus.COMPLETED)
                     self._log(f"✓ Task {task.id} completed")
+                    self.memory.remember_decision(f"Task {task.id} completed", {"title": task.title})
                 else:
+                    heal = self._self_heal_task(task)
                     self.planner.update_task_status(task.id, TaskStatus.FAILED)
-                    self._log(f"✗ Task {task.id} failed")
+                    if heal:
+                        self._log(f"⚠ Task {task.id} queued for retry after self-heal suggestions")
+                    else:
+                        self._log(f"✗ Task {task.id} failed")
                     
             except Exception as e:
                 self.planner.update_task_status(task.id, TaskStatus.FAILED, error=str(e))
                 self._log(f"✗ Error executing task: {str(e)}")
+            
+            self._reflect_and_replan(task, allow_retry=heal)
+            self.observer.record(
+                "task",
+                task.status.value,
+                {"task_id": task.id, "title": task.title, "status": task.status.value},
+            )
         
         # Phase 3: Finalization
         self._log("\n" + "="*60)
         self._log("EXECUTION COMPLETE")
         self._log("="*60)
+
+        validation_result = None
+        if validate_code:
+            self.observer.start("validation")
+            validation_result = self._validate_code(project_type, self.output_dir, enabled=validate_code)
+            self.observer.finish("validation", {"passed": validation_result.get("passed", False)})
+
+        security_result = self._run_security_checks()
+        pipeline_plan = self.cicd.generate_plan(project_type, self.output_dir)
+
+        progress = self.planner.get_progress()
+        observability = self.observer.snapshot(progress, validation_result, security_result)
         
         return {
             "success": self.planner.is_plan_complete(),
             "plan": [task.to_dict() for task in self.planner.tasks],
-            "generation": {"output_dir": self.output_dir, "success": True}
+            "generation": {"output_dir": self.output_dir, "success": True},
+            "intent": {
+                "description": intent.description,
+                "success_criteria": intent.success_criteria,
+                "definition_of_done": intent.definition_of_done,
+            },
+            "architecture": architecture.__dict__,
+            "team": team,
+            "validation": validation_result,
+            "security": security_result,
+            "cicd": pipeline_plan,
+            "observability": observability,
+            "confidence": observability["confidence"],
+            "memory": self.memory.snapshot(),
+            "progress": progress,
         }
 
     def _initialize_workspace(self, project_type: str):
@@ -253,6 +328,42 @@ Action: <tool_code>finish()</tool_code>
             
         except Exception as e:
             return f"Tool Execution Error: {str(e)}"
+
+    def _self_heal_task(self, task) -> bool:
+        """Attempt auto-debug and self-heal for a failed task."""
+        try:
+            analysis = self.debugger.analyze_error(
+                error_message=f"Task {task.id} failed",
+                code_context=task.description,
+            )
+            self.memory.remember_bug(f"Task {task.id} failure", analysis.get("error_message"))
+            # If suggestions exist, we consider the agent to have adjusted the plan.
+            return bool(analysis.get("suggestions"))
+        except Exception as e:
+            self.memory.remember_bug(f"Self-heal skipped for task {task.id}", str(e))
+            return False
+
+    def _reflect_and_replan(self, task, allow_retry: bool = False) -> None:
+        """Record reflections and reprioritize pending tasks if needed."""
+        note = f"Task {task.id} -> {task.status.value}"
+        self.memory.reflect(note)
+        if task.status == TaskStatus.FAILED and allow_retry:
+            # Move failed task to end for a retry opportunity
+            idx = next((i for i, t in enumerate(self.planner.tasks) if t.id == task.id), None)
+            retries = self.retry_counts.get(task.id, 0)
+            if retries < 1 and idx is not None:
+                self.retry_counts[task.id] = retries + 1
+                failed_task = self.planner.tasks.pop(idx)
+                self.planner.tasks.append(failed_task)
+            elif retries >= 1:
+                self.memory.remember_bug(f"Retry limit reached for task {task.id}", task.description)
+
+    def _run_security_checks(self) -> Dict:
+        """Run lightweight security and compliance checks."""
+        try:
+            return self.security_guard.check_workspace(self.output_dir)
+        except Exception as e:
+            return {"issues": [f"Security scan failed: {e}"], "secrets": [], "scanned_files": 0}
     
     def _handle_error(self, phase: str, error: str) -> Dict:
         """Handle execution errors"""
@@ -266,10 +377,13 @@ Action: <tool_code>finish()</tool_code>
             "progress": {"total": 0, "completed": 0, "percentage": 0}
         }
     
-    def _validate_code(self, project_type: str, project_dir: str) -> Dict:
+    def _validate_code(self, project_type: str, project_dir: str, enabled: bool = True) -> Optional[Dict]:
         """Validate generated code"""
         from ..validation import create_validator
         
+        if not enabled:
+            return None
+
         try:
             validator = create_validator(project_type, project_dir)
             result = validator.validate()
