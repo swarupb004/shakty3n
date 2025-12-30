@@ -66,6 +66,7 @@ class AutonomousExecutor:
     def __init__(self, ai_provider, output_dir: str = "./generated_projects"):
         self.ai_provider = ai_provider
         self.output_dir = output_dir
+        os.makedirs(output_dir, exist_ok=True)
         self.planner = TaskPlanner(ai_provider)
         self.debugger = AutoDebugger(ai_provider)
         self.on_log = None
@@ -80,9 +81,6 @@ class AutonomousExecutor:
         # Initialize tools
         from .tools import ToolRegistry
         self.tools = ToolRegistry(output_dir)
-        
-        # Create output directory
-        os.makedirs(output_dir, exist_ok=True)
         
     def _log(self, message: str):
         print(message)
@@ -345,8 +343,9 @@ Action: <tool_code>finish()</tool_code>
         self.memory.reflect(note)
         if task.status == TaskStatus.FAILED:
             # Move failed task to end for a retry opportunity
-            if 0 <= task.id < len(self.planner.tasks):
-                failed_task = self.planner.tasks.pop(task.id)
+            idx = next((i for i, t in enumerate(self.planner.tasks) if t.id == task.id), None)
+            if idx is not None and 0 <= idx < len(self.planner.tasks):
+                failed_task = self.planner.tasks.pop(idx)
                 self.planner.tasks.append(failed_task)
 
     def _run_security_checks(self) -> Dict:

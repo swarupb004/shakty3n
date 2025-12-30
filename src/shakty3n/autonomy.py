@@ -253,7 +253,7 @@ class SecurityGuard:
                 for pattern in self.SECRET_PATTERNS:
                     match = pattern.search(content)
                     if match:
-                        secrets.append(f"{path}: {match.group(0)[:12]}...")
+                        secrets.append(f"{path}: pattern {pattern.pattern}")
 
                 if name.endswith((".pem", ".p12", ".key")):
                     issues.append(f"Key material present: {path}")
