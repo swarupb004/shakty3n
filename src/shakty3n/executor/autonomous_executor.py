@@ -65,22 +65,25 @@ class AutonomousExecutor:
     
     def __init__(self, ai_provider, output_dir: str = "./generated_projects"):
         self.ai_provider = ai_provider
-        self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+        self.output_dir = os.path.abspath(output_dir)
+        os.makedirs(self.output_dir, exist_ok=True)
+        self.artifacts_dir = os.path.join(self.output_dir, "artifacts")
+        os.makedirs(self.artifacts_dir, exist_ok=True)
         self.planner = TaskPlanner(ai_provider)
         self.debugger = AutoDebugger(ai_provider)
         self.on_log = None
         self.intent_analyzer = IntentAnalyzer(ai_provider)
-        self.memory = AutonomyMemory(os.path.join(output_dir, "artifacts", "memory.json"))
+        self.memory = AutonomyMemory(os.path.join(self.artifacts_dir, "memory.json"))
         self.observer = ExecutionObserver()
         self.security_guard = SecurityGuard()
         self.architect = ArchitectureDesigner(ai_provider)
         self.collaborator = CollaborativeOrchestrator()
         self.cicd = CICDOrchestrator()
+        self.retry_counts: Dict[int, int] = {}
         
         # Initialize tools
         from .tools import ToolRegistry
-        self.tools = ToolRegistry(output_dir)
+        self.tools = ToolRegistry(self.output_dir)
         
     def _log(self, message: str):
         print(message)
@@ -140,6 +143,7 @@ class AutonomousExecutor:
             self.planner.update_task_status(task.id, TaskStatus.IN_PROGRESS)
             self.observer.record("task", "started", {"task_id": task.id, "title": task.title})
             
+            heal = False
             try:
                 # ReAct Loop for single task
                 success = self._execute_react_task(task, description)
@@ -150,18 +154,17 @@ class AutonomousExecutor:
                     self.memory.remember_decision(f"Task {task.id} completed", {"title": task.title})
                 else:
                     heal = self._self_heal_task(task)
+                    self.planner.update_task_status(task.id, TaskStatus.FAILED)
                     if heal:
-                        self.planner.update_task_status(task.id, TaskStatus.COMPLETED)
-                        self._log(f"✓ Task {task.id} recovered after self-heal")
+                        self._log(f"⚠ Task {task.id} queued for retry after self-heal suggestions")
                     else:
-                        self.planner.update_task_status(task.id, TaskStatus.FAILED)
                         self._log(f"✗ Task {task.id} failed")
                     
             except Exception as e:
                 self.planner.update_task_status(task.id, TaskStatus.FAILED, error=str(e))
                 self._log(f"✗ Error executing task: {str(e)}")
             
-            self._reflect_and_replan(task)
+            self._reflect_and_replan(task, allow_retry=heal)
             self.observer.record(
                 "task",
                 task.status.value,
@@ -337,16 +340,20 @@ Action: <tool_code>finish()</tool_code>
             self.memory.remember_bug(f"Self-heal skipped for task {task.id}", str(e))
             return False
 
-    def _reflect_and_replan(self, task) -> None:
+    def _reflect_and_replan(self, task, allow_retry: bool = False) -> None:
         """Record reflections and reprioritize pending tasks if needed."""
         note = f"Task {task.id} -> {task.status.value}"
         self.memory.reflect(note)
-        if task.status == TaskStatus.FAILED:
+        if task.status == TaskStatus.FAILED and allow_retry:
             # Move failed task to end for a retry opportunity
             idx = next((i for i, t in enumerate(self.planner.tasks) if t.id == task.id), None)
-            if idx is not None and 0 <= idx < len(self.planner.tasks):
+            retries = self.retry_counts.get(task.id, 0)
+            if retries < 1 and idx is not None and 0 <= idx < len(self.planner.tasks):
+                self.retry_counts[task.id] = retries + 1
                 failed_task = self.planner.tasks.pop(idx)
                 self.planner.tasks.append(failed_task)
+            elif retries >= 1:
+                self.memory.remember_bug(f"Retry limit reached for task {task.id}", task.description)
 
     def _run_security_checks(self) -> Dict:
         """Run lightweight security and compliance checks."""

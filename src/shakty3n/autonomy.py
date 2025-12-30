@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
+RESPONSE_TRUNCATION_LIMIT = 160
+
 
 # ---------- Intent & Architecture ----------
 
@@ -70,7 +72,7 @@ class IntentAnalyzer:
                     temperature=0.2,
                 )
                 if isinstance(response, str) and response.strip():
-                    success_criteria.append(response.strip()[:160])
+                    success_criteria.append(response.strip()[:RESPONSE_TRUNCATION_LIMIT])
             except Exception:
                 # Safe fallback – never block execution on provider errors
                 pass
@@ -253,7 +255,7 @@ class SecurityGuard:
                 for pattern in self.SECRET_PATTERNS:
                     match = pattern.search(content)
                     if match:
-                        secrets.append(f"{path}: pattern {pattern.pattern}")
+                        secrets.append(f"{path}: secret-like value detected")
 
                 if name.endswith((".pem", ".p12", ".key")):
                     issues.append(f"Key material present: {path}")
