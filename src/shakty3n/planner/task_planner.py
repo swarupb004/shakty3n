@@ -113,7 +113,7 @@ Use 3-10 tasks depending on complexity."""
             start = text.find("{")
             # Find the LAST closing brace
             end = text.rfind("}") + 1
-            if start != -1 and end != -1:
+            if start != -1 and end > start:
                  json_str = text[start:end]
             else:
                  json_str = "{}"

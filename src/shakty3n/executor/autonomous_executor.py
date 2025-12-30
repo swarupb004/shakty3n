@@ -2,6 +2,7 @@
 Autonomous Execution Engine
 """
 from typing import Dict, Optional
+import ast
 import os
 import time
 from ..planner import TaskPlanner, TaskStatus
@@ -223,10 +224,28 @@ Action: <tool_code>finish()</tool_code>
                 "finish": lambda: "Task Completed"
             }
             
-            # Eval/Exec
-            # We assume code is a single function call string like 'run_command("ls")'
-            # We can use eval() safely-ish here because we control the scope
-            return str(eval(code, {"__builtins__": {}}, local_scope))
+            parsed = ast.parse(code, mode="eval")
+            if not isinstance(parsed.body, ast.Call) or not isinstance(parsed.body.func, ast.Name):
+                raise ValueError("Invalid tool invocation")
+
+            func_name = parsed.body.func.id
+            if func_name not in local_scope:
+                raise ValueError(f"Tool '{func_name}' not allowed")
+
+            args = []
+            for arg in parsed.body.args:
+                if isinstance(arg, ast.Constant):
+                    args.append(arg.value)
+                else:
+                    raise ValueError("Only literal arguments are supported")
+
+            kwargs = {}
+            for kw in parsed.body.keywords:
+                if not isinstance(kw.value, ast.Constant):
+                    raise ValueError("Only literal keyword arguments are supported")
+                kwargs[kw.arg] = kw.value.value
+
+            return str(local_scope[func_name](*args, **kwargs))
             
         except Exception as e:
             return f"Tool Execution Error: {str(e)}"

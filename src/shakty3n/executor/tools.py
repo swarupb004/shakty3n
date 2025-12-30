@@ -85,12 +85,7 @@ class ToolRegistry:
                 
             exe = parts[0]
             if exe not in self.allowed_commands:
-                # Check if it's a relative path in allowed commands
-                # Or just extremely strict?
-                # Let's allow anything for now but log it warningly?
-                # NO, the Plan said REAct loop.
-                # Let's check against allowlist.
-                pass
+                return f"Error: Command '{exe}' is not permitted"
                 
             # For ReAct, we want the agent to be powerful.
             # We'll allow common dev tools.

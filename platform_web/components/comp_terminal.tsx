@@ -94,7 +94,7 @@ export default function AgentTerminal({ agentId }: AgentTerminalProps) {
                 try {
                     fitAddonRef.current.fit();
                 } catch (e) {
-                    // Silently ignore - terminal may be in transition
+                    console.warn('Terminal resize skipped during transition', e);
                 }
             }, 100);
         });

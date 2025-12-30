@@ -215,8 +215,8 @@ class ConnectionManager:
         for connection in self.active_connections:
             try:
                 await connection.send_text(message)
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to broadcast message to a websocket: {e}")
 
 manager = ConnectionManager()
 
