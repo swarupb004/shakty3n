@@ -18,7 +18,7 @@ class ProjectStatus(str, Enum):
 
 
 class ProjectDatabase:
-    """SQLite database for storing project runs"""
+    """SQLite database for storing project runs and chat history"""
     
     def __init__(self, db_path: str = "shakty3n_projects.db"):
         self.db_path = db_path
@@ -46,7 +46,103 @@ class ProjectDatabase:
                     metadata TEXT
                 )
             """)
+            
+            # Chat history table for persistent memory
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Index for faster chat history lookups
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_chat_history_project 
+                ON chat_history(project_id)
+            """)
+            
             conn.commit()
+    
+    # ==================== Chat History Methods ====================
+    
+    def add_chat_message(
+        self,
+        project_id: str,
+        role: str,
+        content: str
+    ) -> int:
+        """Add a chat message to history. Returns message ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO chat_history (project_id, role, content)
+                VALUES (?, ?, ?)
+                """,
+                (project_id, role, content)
+            )
+            conn.commit()
+            return cursor.lastrowid
+    
+    def get_chat_history(
+        self,
+        project_id: str,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Get chat history for a project, ordered by creation time."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                """
+                SELECT id, role, content, created_at 
+                FROM chat_history 
+                WHERE project_id = ? 
+                ORDER BY created_at ASC
+                LIMIT ?
+                """,
+                (project_id, limit)
+            )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": row["id"],
+                    "role": row["role"],
+                    "content": row["content"],
+                    "created_at": row["created_at"]
+                }
+                for row in rows
+            ]
+    
+    def clear_chat_history(self, project_id: str):
+        """Clear all chat history for a project."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "DELETE FROM chat_history WHERE project_id = ?",
+                (project_id,)
+            )
+            conn.commit()
+    
+    def get_recent_context(
+        self,
+        project_id: str,
+        max_messages: int = 20
+    ) -> str:
+        """Get recent chat as formatted context string for AI."""
+        history = self.get_chat_history(project_id, limit=max_messages)
+        if not history:
+            return ""
+        
+        context_parts = []
+        for msg in history:
+            role_label = "User" if msg["role"] == "user" else "Assistant"
+            context_parts.append(f"{role_label}: {msg['content']}")
+        
+        return "\n\n".join(context_parts)
+    
+    # ==================== Project Methods ====================
     
     def create_project(
         self,
@@ -114,6 +210,34 @@ class ProjectDatabase:
                 "error_message": row["error_message"],
                 "metadata": json.loads(row["metadata"]) if row["metadata"] else {}
             }
+    
+    def get_project_by_path(self, artifact_path: str) -> Optional[Dict[str, Any]]:
+        """Get project by artifact path (for resume functionality)"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                "SELECT * FROM projects WHERE artifact_path = ?",
+                (artifact_path,)
+            )
+            row = cursor.fetchone()
+            
+            if not row:
+                return None
+            
+            return self.get_project(row["id"])
+    
+    def update_project_model(self, project_id: str, provider: str, model: str):
+        """Update project's AI provider and model"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                UPDATE projects 
+                SET provider = ?, model = ?, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = ?
+                """,
+                (provider, model, project_id)
+            )
+            conn.commit()
     
     def list_projects(
         self,
@@ -202,7 +326,9 @@ class ProjectDatabase:
             conn.commit()
     
     def delete_project(self, project_id: str):
-        """Delete a project"""
+        """Delete a project and its chat history"""
         with sqlite3.connect(self.db_path) as conn:
+            conn.execute("DELETE FROM chat_history WHERE project_id = ?", (project_id,))
             conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
             conn.commit()
+

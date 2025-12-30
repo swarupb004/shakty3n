@@ -5,6 +5,9 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TaskStatus(Enum):
@@ -67,20 +70,18 @@ Return the plan in JSON format with the following structure:
   ]
 }"""
         
-        prompt = f"""Create a detailed development plan for the following project:
+        prompt = f"""Create a detailed, actionable development plan for the following project:
 
 Project Type: {project_type}
 Description: {project_description}
 
-Consider:
-1. Project setup and initialization
-2. Architecture and structure
-3. Core functionality implementation
-4. Testing and validation
-5. Documentation
-6. Deployment preparation
+You are an Autonomous Agent that uses tools (read_file, write_file, run_command).
+Break down the project into concrete, executable tasks. 
+Avoid vague tasks like "Development" or "Testing". 
+Instead, use specific tasks like "Initialize Node.js project", "Create src/index.js", "Implement login component".
 
-Return a comprehensive, ordered plan in JSON format."""
+Return the plan in JSON format with strictly ordered dependencies.
+Use 3-10 tasks depending on complexity."""
 
         try:
             response = self.ai_provider.generate(
@@ -111,31 +112,30 @@ Return a comprehensive, ordered plan in JSON format."""
             end = text.find("```", start)
             json_str = text[start:end].strip()
         else:
-            # Try to find JSON object directly
-            start = text.find("{")
-            end = text.rfind("}") + 1
-            json_str = text[start:end]
+            try:
+                start = text.index("{")
+                decoder = json.JSONDecoder()
+                obj, idx = decoder.raw_decode(text[start:])
+                json_str = text[start:start+idx]
+            except (ValueError, json.JSONDecodeError):
+                json_str = "{}"
         
         try:
             return json.loads(json_str)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.debug("Failed to parse planner JSON payload: %s", e)
             # Fallback: create basic plan
             return {
                 "tasks": [
                     {
-                        "title": "Setup Project",
-                        "description": "Initialize project structure and dependencies",
+                        "title": "Initialize Project",
+                        "description": "Set up project structure and configuration",
                         "dependencies": []
                     },
                     {
-                        "title": "Implement Core Features",
-                        "description": "Develop main functionality",
+                        "title": "Implement Features",
+                        "description": "Write code files based on requirements",
                         "dependencies": [0]
-                    },
-                    {
-                        "title": "Testing and Validation",
-                        "description": "Test the implementation",
-                        "dependencies": [1]
                     }
                 ]
             }

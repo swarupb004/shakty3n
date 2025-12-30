@@ -212,9 +212,10 @@ class AgentManager:
         model: Optional[str] = None,
         ai_provider: Optional[AIProvider] = None,
         output_dir: Optional[str] = None,
+        agent_id: Optional[str] = None,  # Allow custom ID for persistence
     ) -> AgentSession:
         """Create a new agent with its own workspace and executor."""
-        agent_id = str(uuid.uuid4())
+        agent_id = agent_id or str(uuid.uuid4())
         agent_dir_name = name if name else agent_id
         agent_output_dir = output_dir or os.path.join(self.base_output_dir, agent_dir_name)
 
@@ -247,6 +248,15 @@ class AgentManager:
         agent.workspace._record_event("workflow_started", description, {"project_type": project_type})
 
         loop = asyncio.get_running_loop()
+        
+        # Helper to bridge log events to workspace
+        def on_log(msg: str):
+             # Record as a terminal event so it shows up in UI
+             # We use loop.call_soon_threadsafe because this runs in a thread
+             loop.call_soon_threadsafe(
+                 agent.workspace._record_event, "terminal", msg
+             )
+        
         result = await loop.run_in_executor(
             None,
             lambda: agent.executor.execute_project(
@@ -255,6 +265,7 @@ class AgentManager:
                 requirements=requirements or {},
                 generate_tests=generate_tests,
                 validate_code=validate_code,
+                on_log=on_log
             ),
         )
 

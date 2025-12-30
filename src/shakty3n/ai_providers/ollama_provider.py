@@ -3,20 +3,25 @@ Ollama Local Model Provider Implementation
 """
 from typing import List, Optional
 import requests
+import logging
 from .base import AIProvider
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaProvider(AIProvider):
     """Ollama local model provider"""
     
     def __init__(self, api_key: Optional[str] = None, model: str = "llama2", 
-                 base_url: str = "http://localhost:11434"):
+                 base_url: Optional[str] = None):
         super().__init__(api_key, model)
-        self.base_url = base_url
+        import os
+        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.model = model
     
     def generate(self, prompt: str, system_prompt: Optional[str] = None,
-                 temperature: float = 0.7, max_tokens: int = 4000) -> str:
+                 temperature: float = 0.7, max_tokens: int = 4000,
+                 stop: Optional[List[str]] = None) -> str:
         """Generate response using Ollama API"""
         try:
             full_prompt = prompt
@@ -29,7 +34,8 @@ class OllamaProvider(AIProvider):
                     "model": self.model,
                     "prompt": full_prompt,
                     "temperature": temperature,
-                    "stream": False
+                    "stream": False,
+                    "stop": stop or None
                 }
             )
             response.raise_for_status()
@@ -73,13 +79,14 @@ class OllamaProvider(AIProvider):
             response.raise_for_status()
             models = response.json().get("models", [])
             return [model["name"] for model in models]
-        except:
+        except Exception as e:
+            logger.warning("Ollama API error while fetching models: %s", e)
             return [
-                "llama2",
-                "codellama",
-                "mistral",
-                "mixtral",
-                "qwen3-coder",
+                "devstral:latest",
+                "codestral:22b",
+                "deepseek-coder:6.7b",
+                "llama3.1:latest",
+                "deepseek-r1:8b",
                 "qwen2.5-coder",
-                "deepseek-coder"
+                "codellama"
             ]

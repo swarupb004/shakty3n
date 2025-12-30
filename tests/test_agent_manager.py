@@ -20,17 +20,29 @@ class MockAIProvider(AIProvider):
     """Deterministic provider used for offline tests."""
 
     def generate(
-        self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 4000
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+        stop: Optional[List[str]] = None,
     ) -> str:
+        response = "Mock response"
         if "package.json" in prompt:
-            return '{"name":"demo-app","version":"1.0.0","scripts":{"start":"echo start"},"dependencies":{}}'
+            response = '{"name":"demo-app","version":"1.0.0","scripts":{"start":"echo start"},"dependencies":{}}'
         if "Create a detailed development plan" in prompt or "development plan" in prompt:
-            return '{"tasks":[{"title":"Plan","description":"Plan work","dependencies":[]},{"title":"Build","description":"Implement","dependencies":[0]}]}'
+            response = '{"tasks":[{"title":"Plan","description":"Plan work","dependencies":[]},{"title":"Build","description":"Implement","dependencies":[0]}]}'
         if "React component" in prompt:
-            return "import React from 'react';\nexport default function App(){return <div>App</div>;}"
+            response = "import React from 'react';\nexport default function App(){return <div>App</div>;}"
         if "Execute the following task" in prompt:
-            return "Task executed successfully."
-        return "Mock response"
+            response = "Task executed successfully."
+        if "Thought:" in prompt:
+            response = "Thought: finish()"
+
+        for seq in stop or []:
+            if seq in response:
+                response = response.split(seq)[0]
+        return response
 
     def stream_generate(
         self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 4000
