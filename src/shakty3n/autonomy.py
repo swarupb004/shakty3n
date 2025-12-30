@@ -26,10 +26,8 @@ SECRET_PATTERNS = [
 
 def _fresh_memory_state() -> Dict[str, Any]:
     return {
-        "decisions": [],
-        "bugs": [],
-        "preferences": {},
-        "reflections": [],
+        key: ([] if isinstance(value, list) else {} if isinstance(value, dict) else value)
+        for key, value in DEFAULT_MEMORY_STATE.items()
     }
 
 
@@ -247,6 +245,8 @@ class SecurityGuard:
         scanned = 0
 
         for base, _, files in os.walk(root_dir):
+            if scanned >= self.max_files:
+                break
             for name in files:
                 if scanned >= self.max_files:
                     break

@@ -110,6 +110,9 @@ class AutonomousExecutor:
         intent = self._analyze_intent(description, requirements or {})
         architecture = self.architect.design(intent, project_type)
         team = self.collaborator.build_team(intent)
+        self.intent = intent
+        self.architecture = architecture
+        self.team = team
         self.observer.finish("intent_understanding", {"success_criteria": len(intent.success_criteria)})
         
         # Phase 1: Planning
@@ -176,10 +179,10 @@ class AutonomousExecutor:
         self._log("EXECUTION COMPLETE")
         self._log("="*60)
 
+        validation_result = None
         if validate_code:
             self.observer.start("validation")
-        validation_result = self._validate_code(project_type, self.output_dir, enabled=validate_code)
-        if validate_code and validation_result is not None:
+            validation_result = self._validate_code(project_type, self.output_dir, enabled=validate_code)
             self.observer.finish("validation", {"passed": validation_result.get("passed", False)})
 
         security_result = self._run_security_checks()
