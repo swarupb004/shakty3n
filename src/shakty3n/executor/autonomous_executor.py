@@ -176,10 +176,10 @@ class AutonomousExecutor:
         self._log("EXECUTION COMPLETE")
         self._log("="*60)
 
-        validation_result = None
         if validate_code:
             self.observer.start("validation")
-            validation_result = self._validate_code(project_type, self.output_dir)
+        validation_result = self._validate_code(project_type, self.output_dir, enabled=validate_code)
+        if validate_code and validation_result is not None:
             self.observer.finish("validation", {"passed": validation_result.get("passed", False)})
 
         security_result = self._run_security_checks()
@@ -374,10 +374,13 @@ Action: <tool_code>finish()</tool_code>
             "progress": {"total": 0, "completed": 0, "percentage": 0}
         }
     
-    def _validate_code(self, project_type: str, project_dir: str) -> Dict:
+    def _validate_code(self, project_type: str, project_dir: str, enabled: bool = True) -> Optional[Dict]:
         """Validate generated code"""
         from ..validation import create_validator
         
+        if not enabled:
+            return None
+
         try:
             validator = create_validator(project_type, project_dir)
             result = validator.validate()

@@ -16,6 +16,21 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 RESPONSE_TRUNCATION_LIMIT = 160
+DEFAULT_MEMORY_STATE = {"decisions": [], "bugs": [], "preferences": {}, "reflections": []}
+SECRET_PATTERNS = [
+    re.compile(r"AKIA[0-9A-Z]{16}", re.IGNORECASE),
+    re.compile(r"api[_-]?key\s*=\s*[A-Za-z0-9_\-]{12,}", re.IGNORECASE),
+    re.compile(r"secret\s*=\s*[A-Za-z0-9_\-]{12,}", re.IGNORECASE),
+]
+
+
+def _fresh_memory_state() -> Dict[str, Any]:
+    return {
+        "decisions": [],
+        "bugs": [],
+        "preferences": {},
+        "reflections": [],
+    }
 
 
 # ---------- Intent & Architecture ----------
@@ -123,12 +138,7 @@ class AutonomyMemory:
 
     def __init__(self, storage_path: str):
         self.storage_path = Path(storage_path)
-        self.state: Dict[str, Any] = {
-            "decisions": [],
-            "bugs": [],
-            "preferences": {},
-            "reflections": [],
-        }
+        self.state: Dict[str, Any] = _fresh_memory_state()
         self._load()
 
     def _load(self) -> None:
@@ -137,7 +147,7 @@ class AutonomyMemory:
                 self.state.update(json.loads(self.storage_path.read_text(encoding="utf-8")))
             except Exception:
                 # Corrupt memory should not block execution; reinitialize.
-                self.state = {k: v for k, v in self.state.items()}
+                self.state = _fresh_memory_state()
 
     def _save(self) -> None:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
@@ -227,14 +237,9 @@ class ExecutionObserver:
 class SecurityGuard:
     """Static security checks for secrets, risky files, and dependency hints."""
 
-    SECRET_PATTERNS: Sequence[re.Pattern] = [
-        re.compile(r"AKIA[0-9A-Z]{16}", re.IGNORECASE),
-        re.compile(r"api[_-]?key\s*=\s*[A-Za-z0-9_\-]{12,}", re.IGNORECASE),
-        re.compile(r"secret\s*=\s*[A-Za-z0-9_\-]{12,}", re.IGNORECASE),
-    ]
-
     def __init__(self, max_files: int = 200):
         self.max_files = max_files
+        self.patterns: Sequence[re.Pattern] = SECRET_PATTERNS
 
     def check_workspace(self, root_dir: str) -> Dict[str, Any]:
         issues: List[str] = []
@@ -252,7 +257,7 @@ class SecurityGuard:
                 except Exception:
                     continue
 
-                for pattern in self.SECRET_PATTERNS:
+                for pattern in self.patterns:
                     match = pattern.search(content)
                     if match:
                         secrets.append(f"{path}: secret-like value detected")
