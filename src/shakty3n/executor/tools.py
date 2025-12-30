@@ -10,7 +10,7 @@ from pathlib import Path
 
 class ToolRegistry:
     def __init__(self, workspace_root: str):
-        self.workspace_root = os.path.abspath(workspace_root)
+        self.workspace_root = os.path.realpath(os.path.abspath(workspace_root))
         self.allowed_commands = ["ls", "cd", "pwd", "mkdir", "echo", "cat", 
                                 "npm", "node", "python3", "pip3", "git", 
                                 "grep", "find", "mv", "cp", "rm"]
@@ -20,11 +20,10 @@ class ToolRegistry:
         if not path:
             return self.workspace_root
             
-        full_path = os.path.abspath(os.path.join(self.workspace_root, path))
+        full_path = os.path.realpath(os.path.join(self.workspace_root, path))
         
-        # Security check: ensure path is within workspace
-        # We allow reading outside ONLY for system libs if absolutely needed, 
-        # but for now restrict to workspace to prevent havoc.
+        # Security: keep all file access inside the workspace sandbox
+        # Future relaxation should be deliberate and documented.
         if not full_path.startswith(self.workspace_root):
             # Exception: allow temporary or common paths if configured?
             # For strict safety:

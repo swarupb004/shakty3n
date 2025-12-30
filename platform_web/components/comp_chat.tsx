@@ -245,6 +245,15 @@ export function AgentChat({ agentId }: AgentChatProps) {
         }
     };
 
+    const inferProjectType = (description: string): string => {
+        const descLower = description.toLowerCase();
+        const staticHints = ["html", "static", "landing page", "single page", "simple page", "plain page"];
+        if (staticHints.some((hint) => descLower.includes(hint))) {
+            return "html";
+        }
+        return "web-react";
+    };
+
     const startWorkflow = async (config: ProjectConfig) => {
         try {
             setIsProcessing(true);
@@ -252,13 +261,7 @@ export function AgentChat({ agentId }: AgentChatProps) {
             // Determine project type with smart defaults
             let projectType = config.type;
             if (!projectType || projectType.trim() === "") {
-                // Try to detect from description
-                const descLower = config.description.toLowerCase();
-                if (descLower.includes("html") || descLower.includes("static") || descLower.includes("simple page")) {
-                    projectType = "html";  // Will use StaticHTMLGenerator
-                } else {
-                    projectType = "web-react";  // Default fallback
-                }
+                projectType = inferProjectType(config.description);
             }
 
             await api.post(`/api/agents/${agentId}/workflow`, {

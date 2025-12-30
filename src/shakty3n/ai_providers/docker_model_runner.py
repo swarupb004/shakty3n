@@ -74,7 +74,9 @@ class DockerModelRunnerProvider(AIProvider):
         except httpx.ConnectError:
             raise Exception(
                 "Cannot connect to Docker Model Runner. "
-                "Make sure you've run: docker desktop enable model-runner --tcp=12434"
+                "On the host, ensure Docker Desktop model runner is enabled with "
+                "`docker desktop enable model-runner --tcp=12434` and reachable at the configured port. "
+                "Inside Docker, set DOCKER_MODEL_RUNNER_URL or confirm model-runner.docker.internal resolves."
             )
         except Exception as e:
             raise Exception(f"Docker Model Runner API error: {str(e)}")

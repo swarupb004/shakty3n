@@ -96,7 +96,7 @@ class AutonomousExecutor:
         self._log("\n⚡ Phase 2: Autonomous Intent Execution...")
         
         # Initialize workspace (Scaffold if needed)
-        self._initialize_workspace()
+        self._initialize_workspace(project_type)
         
         max_iterations = 50 
         iteration = 0
@@ -136,10 +136,14 @@ class AutonomousExecutor:
             "generation": {"output_dir": self.output_dir, "success": True}
         }
 
-    def _initialize_workspace(self):
+    def _initialize_workspace(self, project_type: str):
         """Setup initial workspace state"""
-        if not os.path.exists(os.path.join(self.output_dir, "package.json")):
-             self.tools.run_command("npm init -y")
+        js_like = any(
+            kw in project_type.lower()
+            for kw in ["web", "react", "vue", "angular", "svelte", "next", "electron"]
+        )
+        if js_like and not os.path.exists(os.path.join(self.output_dir, "package.json")):
+            self.tools.run_command("npm init -y")
 
     def _execute_react_task(self, task, project_context: str) -> bool:
         """Execute a task using ReAct (Reason, Act, Observe) loop"""
@@ -226,7 +230,7 @@ Action: <tool_code>finish()</tool_code>
             
             parsed = ast.parse(code, mode="eval")
             if not isinstance(parsed.body, ast.Call) or not isinstance(parsed.body.func, ast.Name):
-                raise ValueError("Invalid tool invocation")
+                raise ValueError("Tool invocations must be simple function calls like run_command(\"ls\")")
 
             func_name = parsed.body.func.id
             if func_name not in local_scope:

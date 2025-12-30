@@ -5,6 +5,9 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TaskStatus(Enum):
@@ -109,18 +112,18 @@ Use 3-10 tasks depending on complexity."""
             end = text.find("```", start)
             json_str = text[start:end].strip()
         else:
-            # Try to find JSON object directly
-            start = text.find("{")
-            # Find the LAST closing brace
-            end = text.rfind("}") + 1
-            if start != -1 and end > start:
-                 json_str = text[start:end]
-            else:
-                 json_str = "{}"
+            try:
+                start = text.index("{")
+                decoder = json.JSONDecoder()
+                obj, idx = decoder.raw_decode(text[start:])
+                json_str = text[start:start+idx]
+            except (ValueError, json.JSONDecodeError):
+                json_str = "{}"
         
         try:
             return json.loads(json_str)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.debug("Failed to parse planner JSON payload: %s", e)
             # Fallback: create basic plan
             return {
                 "tasks": [

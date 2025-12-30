@@ -118,7 +118,7 @@ app.include_router(projects_router)
 async def get_provider_models(provider_name: str):
     try:
         if not agent_manager:
-              raise HTTPException(status_code=503, detail="AgentManager not initialized")
+            raise HTTPException(status_code=503, detail="AgentManager not initialized")
         
         # Determine provider class
         from shakty3n.ai_providers import OpenAIProvider, AnthropicProvider, GoogleProvider, OllamaProvider, DockerModelRunnerProvider
@@ -132,7 +132,7 @@ async def get_provider_models(provider_name: str):
         
         provider_class = provider_map.get(provider_name.lower())
         if not provider_class:
-             raise HTTPException(status_code=404, detail="Provider not found")
+            raise HTTPException(status_code=404, detail="Provider not found")
              
         # Instantiate provider to get models (requires API keys usually, but Ollama doesn't need much)
         # For remote providers, we ideally want to fetch models without full instantiation if possible,
@@ -144,16 +144,16 @@ async def get_provider_models(provider_name: str):
         # or return the hardcoded list if we can't connect, but for Ollama we really want the dynamic list
         
         if provider_name.lower() == "ollama":
-             # Initialize with default/env settings
-             p = OllamaProvider()
-             models = p.get_available_models()
-             return {"models": models}
+            # Initialize with default/env settings
+            p = OllamaProvider()
+            models = p.get_available_models()
+            return {"models": models}
              
         if provider_name.lower() == "docker":
-             # Docker Model Runner
-             p = DockerModelRunnerProvider()
-             models = p.get_available_models()
-             return {"models": models}
+            # Docker Model Runner
+            p = DockerModelRunnerProvider()
+            models = p.get_available_models()
+            return {"models": models}
              
         # For others, we might stick to defaults or implement dynamic fetching later
         # Returning empty list will signal frontend to use its defaults
@@ -212,11 +212,17 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
-        for connection in self.active_connections:
+        for connection in list(self.active_connections):
             try:
                 await connection.send_text(message)
             except Exception as e:
-                logger.warning(f"Failed to broadcast message to a websocket: {e}")
+                logger.warning(
+                    "WebSocket broadcast failed to %s (active: %d): %s",
+                    getattr(connection, "client", "unknown"),
+                    len(self.active_connections),
+                    e
+                )
+                self.active_connections.remove(connection)
 
 manager = ConnectionManager()
 
@@ -326,7 +332,7 @@ async def list_local_projects():
         for name in os.listdir(base_dir):
             path = os.path.join(base_dir, name)
             if os.path.isdir(path) and not name.startswith('.'):
-                 projects.append(name)
+                projects.append(name)
                  
     return {"projects": projects}
 

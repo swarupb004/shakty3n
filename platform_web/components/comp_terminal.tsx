@@ -94,7 +94,11 @@ export default function AgentTerminal({ agentId }: AgentTerminalProps) {
                 try {
                     fitAddonRef.current.fit();
                 } catch (e) {
-                    console.warn('Terminal resize skipped during transition', e);
+                    const errMsg = e instanceof Error ? e.message : String(e);
+                    console.warn(
+                        'Terminal resize skipped: terminal container not ready for fit',
+                        errMsg
+                    );
                 }
             }, 100);
         });

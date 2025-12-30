@@ -3,7 +3,10 @@ Ollama Local Model Provider Implementation
 """
 from typing import List, Optional
 import requests
+import logging
 from .base import AIProvider
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaProvider(AIProvider):
@@ -77,7 +80,7 @@ class OllamaProvider(AIProvider):
             models = response.json().get("models", [])
             return [model["name"] for model in models]
         except Exception as e:
-            print(f"DEBUG: Ollama API Error: {e}")
+            logger.warning("Ollama API error while fetching models: %s", e)
             return [
                 "devstral:latest",
                 "codestral:22b",
