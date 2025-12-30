@@ -31,6 +31,13 @@ def _fresh_memory_state() -> Dict[str, Any]:
     }
 
 
+def _truncate_at_word(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    truncated = text[:limit].rsplit(" ", 1)[0]
+    return truncated if truncated else text[:limit]
+
+
 # ---------- Intent & Architecture ----------
 
 @dataclass
@@ -85,7 +92,7 @@ class IntentAnalyzer:
                     temperature=0.2,
                 )
                 if isinstance(response, str) and response.strip():
-                    success_criteria.append(response.strip()[:RESPONSE_TRUNCATION_LIMIT])
+                    success_criteria.append(_truncate_at_word(response.strip(), RESPONSE_TRUNCATION_LIMIT))
             except Exception:
                 # Safe fallback – never block execution on provider errors
                 pass
@@ -258,15 +265,14 @@ class SecurityGuard:
                     continue
 
                 for pattern in self.patterns:
-                    match = pattern.search(content)
-                    if match:
+                    for _ in pattern.finditer(content):
                         secrets.append(f"{path}: secret-like value detected")
 
                 if name.endswith((".pem", ".p12", ".key")):
                     issues.append(f"Key material present: {path}")
 
         if scanned >= self.max_files:
-            issues.append(f"Scan truncated at {self.max_files} files for performance.")
+            issues.append(f"Scan truncated for performance (limit: {self.max_files} files).")
 
         return {"issues": issues, "secrets": secrets, "scanned_files": scanned}
 

@@ -351,7 +351,7 @@ Action: <tool_code>finish()</tool_code>
             # Move failed task to end for a retry opportunity
             idx = next((i for i, t in enumerate(self.planner.tasks) if t.id == task.id), None)
             retries = self.retry_counts.get(task.id, 0)
-            if retries < 1 and idx is not None and 0 <= idx < len(self.planner.tasks):
+            if retries < 1 and idx is not None:
                 self.retry_counts[task.id] = retries + 1
                 failed_task = self.planner.tasks.pop(idx)
                 self.planner.tasks.append(failed_task)
