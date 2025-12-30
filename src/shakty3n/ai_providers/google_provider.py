@@ -22,7 +22,8 @@ class GoogleProvider(AIProvider):
         self.model = model
     
     def generate(self, prompt: str, system_prompt: Optional[str] = None,
-                 temperature: float = 0.7, max_tokens: int = 4000) -> str:
+                 temperature: float = 0.7, max_tokens: int = 4000,
+                 stop: Optional[List[str]] = None) -> str:
         """Generate response using Google Gemini API"""
         try:
             full_prompt = prompt
@@ -32,6 +33,7 @@ class GoogleProvider(AIProvider):
             generation_config = genai.types.GenerationConfig(
                 temperature=temperature,
                 max_output_tokens=max_tokens,
+                stop_sequences=stop or None
             )
             
             response = self.model_instance.generate_content(

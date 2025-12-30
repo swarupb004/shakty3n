@@ -7,6 +7,7 @@ from .android_generator import AndroidAppGenerator
 from .ios_generator import IOSAppGenerator
 from .desktop_generator import DesktopAppGenerator
 from .flutter_generator import FlutterAppGenerator
+from .static_generator import StaticHTMLGenerator
 
 __all__ = [
     'CodeGenerator',
@@ -14,5 +15,6 @@ __all__ = [
     'AndroidAppGenerator',
     'IOSAppGenerator',
     'DesktopAppGenerator',
-    'FlutterAppGenerator'
+    'FlutterAppGenerator',
+    'StaticHTMLGenerator'
 ]

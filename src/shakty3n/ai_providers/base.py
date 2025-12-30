@@ -14,7 +14,8 @@ class AIProvider(ABC):
     
     @abstractmethod
     def generate(self, prompt: str, system_prompt: Optional[str] = None, 
-                 temperature: float = 0.7, max_tokens: int = 4000) -> str:
+                 temperature: float = 0.7, max_tokens: int = 4000,
+                 stop: Optional[List[str]] = None) -> str:
         """Generate a response from the AI model"""
         pass
     

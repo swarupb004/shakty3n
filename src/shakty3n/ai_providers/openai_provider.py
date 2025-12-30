@@ -21,7 +21,8 @@ class OpenAIProvider(AIProvider):
         self.model = model
     
     def generate(self, prompt: str, system_prompt: Optional[str] = None,
-                 temperature: float = 0.7, max_tokens: int = 4000) -> str:
+                 temperature: float = 0.7, max_tokens: int = 4000,
+                 stop: Optional[List[str]] = None) -> str:
         """Generate response using OpenAI API"""
         messages = []
         if system_prompt:
@@ -29,12 +30,15 @@ class OpenAIProvider(AIProvider):
         messages.append({"role": "user", "content": prompt})
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            if stop:
+                kwargs["stop"] = stop
+            response = self.client.chat.completions.create(**kwargs)
             return response.choices[0].message.content
         except Exception as e:
             raise Exception(f"OpenAI API error: {str(e)}")

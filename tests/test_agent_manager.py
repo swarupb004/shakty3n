@@ -20,7 +20,12 @@ class MockAIProvider(AIProvider):
     """Deterministic provider used for offline tests."""
 
     def generate(
-        self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 4000
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+        stop: Optional[List[str]] = None,
     ) -> str:
         if "package.json" in prompt:
             return '{"name":"demo-app","version":"1.0.0","scripts":{"start":"echo start"},"dependencies":{}}'
@@ -30,6 +35,8 @@ class MockAIProvider(AIProvider):
             return "import React from 'react';\nexport default function App(){return <div>App</div>;}"
         if "Execute the following task" in prompt:
             return "Task executed successfully."
+        if "Thought:" in prompt:
+            return "Thought: finish()"
         return "Mock response"
 
     def stream_generate(

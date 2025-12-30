@@ -7,6 +7,7 @@ from .openai_provider import OpenAIProvider
 from .anthropic_provider import AnthropicProvider
 from .google_provider import GoogleProvider
 from .ollama_provider import OllamaProvider
+from .docker_model_runner import DockerModelRunnerProvider
 
 
 class AIProviderFactory:
@@ -28,12 +29,16 @@ class AIProviderFactory:
             model = model or "gemini-3.0-pro"
             return GoogleProvider(api_key=api_key, model=model)
         elif provider_name == "ollama":
-            model = model or "llama2"
+            model = model or "deepseek-coder:6.7b"
             return OllamaProvider(model=model)
+        elif provider_name == "docker" or provider_name == "docker-model-runner":
+            model = model or "ai/qwen3-coder:latest"
+            return DockerModelRunnerProvider(model=model)
         else:
             raise ValueError(f"Unknown provider: {provider_name}")
     
     @staticmethod
     def get_available_providers():
         """Get list of available providers"""
-        return ["openai", "anthropic", "google", "ollama"]
+        return ["openai", "anthropic", "google", "ollama", "docker"]
+

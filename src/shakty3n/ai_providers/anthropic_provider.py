@@ -21,18 +21,22 @@ class AnthropicProvider(AIProvider):
         self.model = model
     
     def generate(self, prompt: str, system_prompt: Optional[str] = None,
-                 temperature: float = 0.7, max_tokens: int = 4000) -> str:
+                 temperature: float = 0.7, max_tokens: int = 4000,
+                 stop: Optional[List[str]] = None) -> str:
         """Generate response using Anthropic API"""
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                system=system_prompt if system_prompt else "",
-                messages=[
+            kwargs = {
+                "model": self.model,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "system": system_prompt if system_prompt else "",
+                "messages": [
                     {"role": "user", "content": prompt}
                 ]
-            )
+            }
+            if stop:
+                kwargs["stop_sequences"] = stop
+            response = self.client.messages.create(**kwargs)
             return response.content[0].text
         except Exception as e:
             raise Exception(f"Anthropic API error: {str(e)}")

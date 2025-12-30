@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
@@ -22,10 +22,10 @@ const PROJECT_TYPES = [
 ];
 
 const AI_PROVIDERS = [
-  { value: "openai", label: "OpenAI", models: ["gpt-4", "gpt-3.5-turbo"] },
+  { value: "openai", label: "OpenAI", models: ["gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"] },
   { value: "anthropic", label: "Anthropic", models: ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"] },
   { value: "google", label: "Google", models: ["gemini-3.0-pro", "gemini-pro"] },
-  { value: "ollama", label: "Ollama (Local)", models: ["qwen3-coder", "qwen2.5-coder:7b", "deepseek-coder", "codellama"] },
+  { value: "ollama", label: "Ollama (Local)", models: ["qwen3-coder", "qwen2.5-coder:7b", "deepseek-coder", "codellama", "llama3"] },
 ];
 
 export default function NewProjectPage() {
@@ -42,6 +42,34 @@ export default function NewProjectPage() {
   const [validate, setValidate] = useState(false);
 
   const selectedProvider = AI_PROVIDERS.find((p) => p.value === provider);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+
+  // Fetch models dynamically
+  useEffect(() => {
+    async function fetchModels() {
+      if (provider === 'ollama') {
+        try {
+          const res = await api.get(`/api/providers/${provider}/models`);
+          if (res.models && res.models.length > 0) {
+            setAvailableModels(res.models);
+            if (!res.models.includes(model)) {
+              setModel(res.models[0]);
+            }
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to fetch dynamic models", e);
+        }
+      }
+      // Fallback to static list
+      const staticList = AI_PROVIDERS.find(p => p.value === provider)?.models || [];
+      setAvailableModels(staticList);
+      if (staticList.length > 0 && !staticList.includes(model)) {
+        setModel(staticList[0]);
+      }
+    }
+    fetchModels();
+  }, [provider]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,17 +189,21 @@ export default function NewProjectPage() {
             <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
               Model
             </label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-            >
-              {selectedProvider?.models.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                list="model-options"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="Select or type model name..."
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+              />
+              <datalist id="model-options">
+                {availableModels.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+            </div>
           </div>
 
           {/* Options */}

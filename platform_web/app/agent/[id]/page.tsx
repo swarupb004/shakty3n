@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Editor from "@monaco-editor/react";
 import dynamic from 'next/dynamic';
-import { Folder, FileCode, Save, ChevronRight, RefreshCw, FolderPlus } from "lucide-react";
+import { Folder, FileCode, Save, ChevronRight, RefreshCw, FolderPlus, FolderOpen, X } from "lucide-react";
 import { api, cn } from "@/lib/utils";
 import { AgentChat } from "@/components/comp_chat";
 
@@ -65,8 +65,17 @@ export default function AgentWorkspace() {
     const [files, setFiles] = useState<FileNode[]>([]);
     const [currentFile, setCurrentFile] = useState<string | null>(null);
     const [fileContent, setFileContent] = useState("");
-    const recentAgentsInitial = useMemo(() => loadRecentAgents(), []);
-    const [recentAgents, setRecentAgents] = useState<RecentAgent[]>(recentAgentsInitial);
+    const [recentAgents, setRecentAgents] = useState<RecentAgent[]>([]);
+    const [isClient, setIsClient] = useState(false);
+    const [showOpenModal, setShowOpenModal] = useState(false);
+    const [existingProjects, setExistingProjects] = useState<string[]>([]);
+    const [customPath, setCustomPath] = useState("");
+
+    // Load recent agents only on client after hydration
+    useEffect(() => {
+        setIsClient(true);
+        setRecentAgents(loadRecentAgents());
+    }, []);
 
     const recordRecentAgent = useCallback((name: string) => {
         const agentId = String(id);
@@ -93,7 +102,7 @@ export default function AgentWorkspace() {
     useEffect(() => {
         if (!id) return;
         const refreshFiles = () => {
-            loadFiles().catch(() => {});
+            loadFiles().catch(() => { });
         };
         refreshFiles();
         const interval = setInterval(refreshFiles, 10000);
@@ -157,11 +166,40 @@ export default function AgentWorkspace() {
         } catch { alert("Failed to create folder"); }
     };
 
+    // Open external folder/project
+    const openExternalProject = async (folderPath: string) => {
+        if (!folderPath) return;
+
+        try {
+            const result = await api.post(`/api/agents/${id}/switch-workspace`, {
+                path: folderPath
+            });
+            setAgentName(result.name || folderPath);
+            loadFiles();
+            setCurrentFile(null);
+            setFileContent("");
+            setShowOpenModal(false);
+            setCustomPath("");
+        } catch (e: unknown) {
+            const error = e as { message?: string };
+            alert(`Failed to open folder: ${error?.message || 'Unknown error'}`);
+        }
+    };
+
+    // Load existing projects when modal opens
+    useEffect(() => {
+        if (showOpenModal) {
+            api.get("/api/local-projects")
+                .then(res => setExistingProjects(res.projects || []))
+                .catch(() => setExistingProjects([]));
+        }
+    }, [showOpenModal]);
+
     return (
         <div className="flex flex-col h-screen bg-black text-neutral-300 overflow-hidden font-sans">
             <div className="h-12 border-b border-white/10 bg-neutral-900/70 px-3 flex items-center gap-2 overflow-x-auto">
                 <span className="text-[11px] uppercase text-neutral-500 font-semibold tracking-wide">Recent Projects</span>
-                {recentAgents.map((agent) => (
+                {isClient && recentAgents.map((agent) => (
                     <button
                         key={agent.id}
                         onClick={() => router.push(`/agent/${agent.id}`)}
@@ -176,7 +214,7 @@ export default function AgentWorkspace() {
                         {agent.name}
                     </button>
                 ))}
-                {recentAgents.length === 0 && (
+                {isClient && recentAgents.length === 0 && (
                     <span className="text-xs text-neutral-600">Open a project to pin it here</span>
                 )}
             </div>
@@ -186,6 +224,9 @@ export default function AgentWorkspace() {
                     <div className="h-10 border-b border-white/10 flex items-center justify-between px-3 font-semibold text-xs tracking-wide bg-neutral-900">
                         <span>EXPLORER</span>
                         <div className="flex gap-1">
+                            <button onClick={() => setShowOpenModal(true)} className="p-1 hover:bg-white/10 rounded" title="Open Folder">
+                                <FolderOpen className="w-3.5 h-3.5" />
+                            </button>
                             <button onClick={createFolder} className="p-1 hover:bg-white/10 rounded" title="New Folder">
                                 <FolderPlus className="w-3.5 h-3.5" />
                             </button>
@@ -286,6 +327,74 @@ export default function AgentWorkspace() {
                     <AgentChat agentId={String(id)} />
                 </div>
             </div>
+
+            {/* Open Project Modal */}
+            {showOpenModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-white/10 rounded-xl shadow-2xl w-[500px] max-h-[80vh] overflow-hidden">
+                        <div className="flex items-center justify-between p-4 border-b border-white/10">
+                            <h2 className="text-lg font-semibold text-white">Open Project</h2>
+                            <button onClick={() => setShowOpenModal(false)} className="p-1 hover:bg-white/10 rounded">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
+                            {/* Existing Projects */}
+                            <div>
+                                <h3 className="text-sm font-medium text-neutral-400 mb-2">Recent Projects</h3>
+                                {existingProjects.length === 0 ? (
+                                    <p className="text-xs text-neutral-500">No projects found</p>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {existingProjects.map((project) => (
+                                            <button
+                                                key={project}
+                                                onClick={() => openExternalProject(project)}
+                                                className="w-full text-left px-3 py-2 rounded-lg bg-neutral-800 hover:bg-cyan-500/20 hover:border-cyan-500/50 border border-transparent transition-colors flex items-center gap-2"
+                                            >
+                                                <Folder className="w-4 h-4 text-cyan-400" />
+                                                <span className="text-sm truncate">{project}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Custom Path */}
+                            <div>
+                                <h3 className="text-sm font-medium text-neutral-400 mb-2">Or Enter Custom Path</h3>
+                                <input
+                                    type="text"
+                                    value={customPath}
+                                    onChange={(e) => setCustomPath(e.target.value)}
+                                    placeholder="/external/my-project or ~/Downloads/repo"
+                                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-white/10 focus:border-cyan-500 focus:outline-none text-sm"
+                                />
+                                <p className="text-xs text-neutral-500 mt-1">
+                                    Tip: Copy projects to ./external_projects/ folder to access them via /external/
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-white/10 flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowOpenModal(false)}
+                                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => customPath && openExternalProject(customPath)}
+                                disabled={!customPath}
+                                className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Open Custom Path
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
