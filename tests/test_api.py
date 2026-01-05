@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from platform_api.database import ProjectDatabase, ProjectStatus
 from platform_api.projects import init_project_api
+from platform_api.main import _derive_project_id
 from shakty3n import Config
 
 
@@ -226,6 +227,17 @@ def test_database_list_projects(test_db):
     failed_projects = test_db.list_projects(status=ProjectStatus.FAILED)
     assert len(failed_projects) >= 1
     assert all(p["status"] == ProjectStatus.FAILED for p in failed_projects)
+
+
+def test_project_id_derivation_is_stable():
+    """Project IDs for chat history should be stable per workspace."""
+    path = "/tmp/demo-workspace"
+    pid_one = _derive_project_id("agent-1", path)
+    pid_two = _derive_project_id("agent-1", path)
+    pid_other = _derive_project_id("agent-1", "/tmp/other-workspace")
+
+    assert pid_one == pid_two
+    assert pid_one != pid_other
 
 
 if __name__ == "__main__":

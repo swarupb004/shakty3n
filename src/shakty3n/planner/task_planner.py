@@ -172,6 +172,26 @@ Use 3-10 tasks depending on complexity."""
             )
             subtasks.append(subtask)
         return subtasks
+
+    def load_plan(self, tasks_data: List[Dict]) -> List[Task]:
+        """Load an existing plan from serialized task dictionaries."""
+        loaded_tasks: List[Task] = []
+        for idx, task_data in enumerate(tasks_data):
+            status_value = task_data.get("status", TaskStatus.PENDING.value)
+            status = TaskStatus(status_value) if status_value in TaskStatus._value2member_map_ else TaskStatus.PENDING
+            task = Task(
+                id=task_data.get("id", idx),
+                title=task_data.get("title", f"Task {idx}"),
+                description=task_data.get("description", ""),
+                dependencies=task_data.get("dependencies", []),
+                status=status,
+                result=task_data.get("result"),
+                error=task_data.get("error"),
+            )
+            loaded_tasks.append(task)
+
+        self.tasks = loaded_tasks
+        return self.tasks
     
     def get_next_task(self) -> Optional[Task]:
         """Get the next task to execute"""

@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import pytest
 
 from shakty3n.agent_manager import AgentManager, AgentWorkspace
+from shakty3n.executor import AutonomousExecutor
 from shakty3n.ai_providers.base import AIProvider
 
 
@@ -108,3 +109,22 @@ def test_agent_manager_runs_parallel_workflows(tmp_path):
     artifacts = dashboard["agents"][0]["artifacts"]
     assert any(item["type"] == "plan" for item in artifacts)
     assert any(item["type"] == "code" for item in artifacts)
+
+
+def test_executor_interrupt_and_resume(tmp_path):
+    provider = MockAIProvider()
+    executor = AutonomousExecutor(provider, output_dir=str(tmp_path / "proj"))
+
+    # Interrupt before running to simulate user pause
+    executor.request_interrupt("Hold execution")
+    result = executor.execute_project("Demo app", "web-react")
+    assert result["status"] == "interrupted"
+    state_path = tmp_path / "proj" / "artifacts" / "plan_state.json"
+    assert state_path.exists()
+
+    # Resume with updated instructions
+    resumed = executor.execute_project(
+        "Demo app resumed", "web-react", resume=True, updated_instructions="Continue with new requirements"
+    )
+    assert resumed["success"] is True
+    assert resumed["status"] == "completed"
