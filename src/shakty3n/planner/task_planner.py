@@ -178,7 +178,10 @@ Use 3-10 tasks depending on complexity."""
         loaded_tasks: List[Task] = []
         for idx, task_data in enumerate(tasks_data):
             status_value = task_data.get("status", TaskStatus.PENDING.value)
-            status = TaskStatus(status_value) if status_value in TaskStatus._value2member_map_ else TaskStatus.PENDING
+            try:
+                status = TaskStatus(status_value)
+            except ValueError:
+                status = TaskStatus.PENDING
             task = Task(
                 id=task_data.get("id", idx),
                 title=task_data.get("title", f"Task {idx}"),

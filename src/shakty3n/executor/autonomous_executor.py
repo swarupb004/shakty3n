@@ -484,6 +484,6 @@ Action: <tool_code>finish()</tool_code>
         try:
             if os.path.exists(self.state_file):
                 return json.loads(Path(self.state_file).read_text(encoding="utf-8"))
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             return None
         return None

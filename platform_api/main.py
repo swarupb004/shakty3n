@@ -10,6 +10,7 @@ import json
 import logging
 import time
 import hashlib
+import sqlite3
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -40,7 +41,7 @@ DEFAULT_AGENT_ID = "default-agent"
 
 def _derive_project_id(agent_id: str, workspace_path: str) -> str:
     """Create a stable project ID based on agent and workspace path."""
-    digest = hashlib.sha1(os.path.abspath(workspace_path).encode("utf-8")).hexdigest()[:8]
+    digest = hashlib.sha256(os.path.abspath(workspace_path).encode("utf-8")).hexdigest()[:12]
     return f"{agent_id}-{digest}"
 
 def _ensure_project_record(session: AgentSession) -> Optional[str]:
@@ -61,7 +62,7 @@ def _ensure_project_record(session: AgentSession) -> Optional[str]:
             provider=session.provider_name,
             model=session.model,
         )
-    except Exception:
+    except sqlite3.IntegrityError:
         # If already exists, continue
         existing = project_db.get_project(project_id)
         if existing:
@@ -665,8 +666,9 @@ async def list_files(agent_id: str, path: str = ".", depth: int = 3):
         base_path = Path(session.workspace.root_dir).resolve()
         start_path = Path(session.workspace._resolve_path(path)).resolve()
         start_path.relative_to(base_path)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        logger.warning("Invalid workspace path requested", exc_info=True)
+        raise HTTPException(status_code=400, detail="Invalid path")
 
     tree = []
     stack = [(start_path, 0)]
