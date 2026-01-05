@@ -205,6 +205,8 @@ Use 3-10 tasks depending on complexity."""
                 result=task_data.get("result"),
                 error=task_data.get("error"),
             )
+            if task_data.get("subtasks"):
+                task.subtasks = self._parse_subtasks(task_data.get("subtasks", []), task_id)
             loaded_tasks.append(task)
 
         self.tasks = loaded_tasks

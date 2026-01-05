@@ -237,8 +237,10 @@ class AutonomousExecutor:
             if os.path.exists(self.state_file):
                 try:
                     os.remove(self.state_file)
-                except OSError:
+                except FileNotFoundError:
                     pass
+                except OSError as err:
+                    self._log(f"State cleanup skipped: {err}")
             self._interrupt_requested = False
         
         return {

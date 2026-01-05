@@ -81,13 +81,13 @@ def _ensure_project_record(session: AgentSession) -> Optional[str]:
             provider=session.provider_name,
             model=session.model,
         )
-    except sqlite3.IntegrityError as exc:
+    except sqlite3.IntegrityError:
         # If already exists, continue
         existing = project_db.get_project(project_id)
         if existing:
             project_db.update_artifact_path(project_id, session.workspace.root_dir)
             return project_id
-        logger.error("Failed to create project mapping for %s", session.workspace.root_dir, exc_info=exc)
+        logger.error("Failed to create project mapping for %s", session.workspace.root_dir, exc_info=True)
         return None
 
     project_db.update_artifact_path(project_id, session.workspace.root_dir)
@@ -685,7 +685,7 @@ async def list_files(agent_id: str, path: str = ".", depth: int = 3):
     try:
         base_path = Path(session.workspace.root_dir).resolve()
         start_path = Path(session.workspace._resolve_path(path)).resolve()
-        _ = start_path.relative_to(base_path)
+        relative_root = start_path.relative_to(base_path)
     except (ValueError, OSError):
         logger.warning("Invalid workspace path requested", exc_info=True)
         raise HTTPException(status_code=400, detail="Invalid path")
