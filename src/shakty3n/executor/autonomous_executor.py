@@ -464,12 +464,22 @@ Action: <tool_code>finish()</tool_code>
             }
 
     def request_interrupt(self, note: Optional[str] = None) -> None:
-        """Signal the executor to stop after the current task."""
+        """
+        Signal the executor to stop after the current task loop.
+
+        Args:
+            note: Optional human-readable context explaining why the pause was requested.
+        """
         self._pending_update = note
         self._interrupt_requested = True
 
     def _persist_plan_state(self, description: str, project_type: str, requirements: Dict, tasks) -> None:
-        """Persist the current plan state for resumable execution."""
+        """
+        Persist the current plan state for resumable execution.
+
+        The payload includes the intent description, project type, requirements,
+        and the serialized task list so a later run can continue where it stopped.
+        """
         payload = {
             "description": description,
             "project_type": project_type,
@@ -480,7 +490,13 @@ Action: <tool_code>finish()</tool_code>
         Path(self.state_file).write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def _load_plan_state(self) -> Optional[Dict]:
-        """Load persisted plan state if present."""
+        """
+        Load persisted plan state if present.
+
+        Returns:
+            Dict containing description, project_type, requirements, and plan fields,
+            or None when no state is available or it fails to load cleanly.
+        """
         if not os.path.exists(self.state_file):
             return None
         try:

@@ -40,12 +40,31 @@ project_db: Optional[ProjectDatabase] = None
 DEFAULT_AGENT_ID = "default-agent"
 
 def _derive_project_id(agent_id: str, workspace_path: str) -> str:
-    """Create a stable project ID based on agent and workspace path."""
+    """
+    Create a stable project ID derived from the agent identifier and workspace path.
+
+    Args:
+        agent_id: Identifier for the agent session.
+        workspace_path: Absolute or relative workspace root for the project.
+
+    Returns:
+        A deterministic string composed of the agent ID and a SHA-256 hash prefix
+        of the normalized workspace path so chat history persists per project.
+    """
     digest = hashlib.sha256(os.path.abspath(workspace_path).encode("utf-8")).hexdigest()[:12]
     return f"{agent_id}-{digest}"
 
 def _ensure_project_record(session: AgentSession) -> Optional[str]:
-    """Ensure there is a project record for the agent workspace."""
+    """
+    Ensure there is a project record for the agent workspace.
+
+    Args:
+        session: The active AgentSession whose workspace should map to a project row.
+
+    Returns:
+        The project ID associated with the workspace, creating one if necessary.
+        Returns None when the database is unavailable.
+    """
     if not project_db:
         return None
 

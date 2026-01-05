@@ -174,7 +174,15 @@ Use 3-10 tasks depending on complexity."""
         return subtasks
 
     def load_plan(self, tasks_data: List[Dict]) -> List[Task]:
-        """Load an existing plan from serialized task dictionaries."""
+        """
+        Load an existing plan from serialized task dictionaries.
+
+        Args:
+            tasks_data: List of dictionaries previously produced via Task.to_dict().
+
+        Returns:
+            The list of Task objects with statuses restored for resumption.
+        """
         loaded_tasks: List[Task] = []
         for idx, task_data in enumerate(tasks_data):
             status_value = task_data.get("status", TaskStatus.PENDING.value)
