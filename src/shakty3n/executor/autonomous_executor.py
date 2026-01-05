@@ -481,9 +481,9 @@ Action: <tool_code>finish()</tool_code>
 
     def _load_plan_state(self) -> Optional[Dict]:
         """Load persisted plan state if present."""
+        if not os.path.exists(self.state_file):
+            return None
         try:
-            if os.path.exists(self.state_file):
-                return json.loads(Path(self.state_file).read_text(encoding="utf-8"))
+            return json.loads(Path(self.state_file).read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return None
-        return None

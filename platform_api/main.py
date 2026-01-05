@@ -666,7 +666,7 @@ async def list_files(agent_id: str, path: str = ".", depth: int = 3):
         base_path = Path(session.workspace.root_dir).resolve()
         start_path = Path(session.workspace._resolve_path(path)).resolve()
         start_path.relative_to(base_path)
-    except Exception:
+    except (ValueError, OSError):
         logger.warning("Invalid workspace path requested", exc_info=True)
         raise HTTPException(status_code=400, detail="Invalid path")
 
@@ -677,7 +677,7 @@ async def list_files(agent_id: str, path: str = ".", depth: int = 3):
         current, current_depth = stack.pop()
         try:
             entries = sorted(list(current.iterdir()), key=lambda p: p.name.lower())
-        except FileNotFoundError:
+        except (FileNotFoundError, PermissionError):
             continue
 
         for entry in entries:
