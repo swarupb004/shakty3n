@@ -127,8 +127,8 @@ class AutonomousExecutor:
         self.observer.start("intent_understanding")
         state_payload = self._load_plan_state() if resume else None
         if resume and state_payload:
-            description = description or state_payload.get("description", description)
-            project_type = project_type or state_payload.get("project_type", project_type)
+            description = description or state_payload.get("description")
+            project_type = project_type or state_payload.get("project_type")
             requirements = requirements or state_payload.get("requirements", {})
             self.planner.load_plan(state_payload.get("plan", []))
         if updated_instructions:
@@ -233,12 +233,12 @@ class AutonomousExecutor:
         progress = self.planner.get_progress()
         observability = self.observer.snapshot(progress, validation_result, security_result)
 
-        if not interrupted and os.path.exists(self.state_file):
-            try:
-                os.remove(self.state_file)
-            except OSError:
-                pass
         if not interrupted:
+            if os.path.exists(self.state_file):
+                try:
+                    os.remove(self.state_file)
+                except OSError:
+                    pass
             self._interrupt_requested = False
         
         return {

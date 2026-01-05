@@ -81,13 +81,14 @@ def _ensure_project_record(session: AgentSession) -> Optional[str]:
             provider=session.provider_name,
             model=session.model,
         )
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as exc:
         # If already exists, continue
         existing = project_db.get_project(project_id)
         if existing:
             project_db.update_artifact_path(project_id, session.workspace.root_dir)
             return project_id
-        raise
+        logger.error("Failed to create project mapping for %s", session.workspace.root_dir, exc_info=exc)
+        return None
 
     project_db.update_artifact_path(project_id, session.workspace.root_dir)
     return project_id
@@ -684,37 +685,46 @@ async def list_files(agent_id: str, path: str = ".", depth: int = 3):
     try:
         base_path = Path(session.workspace.root_dir).resolve()
         start_path = Path(session.workspace._resolve_path(path)).resolve()
-        start_path.relative_to(base_path)
+        _ = start_path.relative_to(base_path)
     except (ValueError, OSError):
         logger.warning("Invalid workspace path requested", exc_info=True)
         raise HTTPException(status_code=400, detail="Invalid path")
 
     tree = []
-    stack = [(start_path, 0)]
+    max_depth = max(depth, 1)
 
-    while stack:
-        current, current_depth = stack.pop()
-        try:
-            entries = sorted(list(current.iterdir()), key=lambda p: p.name.lower())
-        except (FileNotFoundError, PermissionError):
-            continue
+    for root, dirs, files in os.walk(start_path):
+        current = Path(root)
+        rel_depth = len(current.relative_to(start_path).parts)
+        if rel_depth >= max_depth:
+            dirs[:] = []
 
-        for entry in entries:
-            if entry.name.startswith("."):
-                continue
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+        for d in dirs:
+            entry = current / d
             rel_path = entry.relative_to(base_path).as_posix()
-            node = {
-                "name": entry.name,
-                "type": "directory" if entry.is_dir() else "file",
-                "path": rel_path,
-            }
-            if entry.is_file():
+            tree.append({"name": entry.name, "type": "directory", "path": rel_path})
+
+        for f in files:
+            if f.startswith("."):
+                continue
+            entry = current / f
+            rel_path = entry.relative_to(base_path).as_posix()
+            try:
                 stat = entry.stat()
-                node["size"] = stat.st_size
-                node["modified"] = stat.st_mtime
-            tree.append(node)
-            if entry.is_dir() and current_depth + 1 < depth:
-                stack.append((entry, current_depth + 1))
+            except (FileNotFoundError, PermissionError):
+                continue
+            tree.append(
+                {
+                    "name": entry.name,
+                    "type": "file",
+                    "path": rel_path,
+                    "size": stat.st_size,
+                    "modified": stat.st_mtime,
+                }
+            )
 
     tree.sort(key=lambda x: (x["type"] != "directory", x["path"]))
     return tree

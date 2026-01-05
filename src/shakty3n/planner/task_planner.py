@@ -190,8 +190,14 @@ Use 3-10 tasks depending on complexity."""
                 status = TaskStatus(status_value)
             except ValueError:
                 status = TaskStatus.PENDING
+            task_id = task_data.get("id")
+            if task_id is None:
+                task_id = self.task_counter
+                self.task_counter += 1
+            else:
+                self.task_counter = max(self.task_counter, task_id + 1)
             task = Task(
-                id=task_data.get("id", idx),
+                id=task_id,
                 title=task_data.get("title", f"Task {idx}"),
                 description=task_data.get("description", ""),
                 dependencies=task_data.get("dependencies", []),
