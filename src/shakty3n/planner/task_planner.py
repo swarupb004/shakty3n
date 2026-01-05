@@ -153,13 +153,13 @@ Use 3-10 tasks depending on complexity."""
             
             # Parse subtasks recursively
             if "subtasks" in task_data:
-                task.subtasks = self._parse_subtasks(task_data["subtasks"], idx)
+                task.subtasks = self._parse_subtasks(task_data["subtasks"])
             
             tasks.append(task)
         
         return tasks
     
-    def _parse_subtasks(self, subtasks_data: List[Dict], parent_id: int) -> List[Task]:
+    def _parse_subtasks(self, subtasks_data: List[Dict]) -> List[Task]:
         """Parse subtasks recursively"""
         subtasks = []
         for idx, subtask_data in enumerate(subtasks_data):
@@ -206,7 +206,7 @@ Use 3-10 tasks depending on complexity."""
                 error=task_data.get("error"),
             )
             if task_data.get("subtasks"):
-                task.subtasks = self._parse_subtasks(task_data.get("subtasks", []), task_id)
+                task.subtasks = self._parse_subtasks(task_data.get("subtasks", []))
             loaded_tasks.append(task)
 
         self.tasks = loaded_tasks

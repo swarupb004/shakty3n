@@ -81,13 +81,13 @@ def _ensure_project_record(session: AgentSession) -> Optional[str]:
             provider=session.provider_name,
             model=session.model,
         )
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as exc:
+        logger.error("Failed to create project mapping for %s", session.workspace.root_dir, exc_info=exc)
         # If already exists, continue
         existing = project_db.get_project(project_id)
         if existing:
             project_db.update_artifact_path(project_id, session.workspace.root_dir)
             return project_id
-        logger.error("Failed to create project mapping for %s", session.workspace.root_dir, exc_info=True)
         return None
 
     project_db.update_artifact_path(project_id, session.workspace.root_dir)
@@ -696,7 +696,7 @@ async def list_files(agent_id: str, path: str = ".", depth: int = 3):
     for root, dirs, files in os.walk(start_path):
         current = Path(root)
         rel_depth = len(current.relative_to(start_path).parts)
-        if rel_depth >= max_depth:
+        if rel_depth > max_depth:
             dirs[:] = []
 
         # Skip hidden directories
