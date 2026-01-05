@@ -153,13 +153,13 @@ Use 3-10 tasks depending on complexity."""
             
             # Parse subtasks recursively
             if "subtasks" in task_data:
-                task.subtasks = self._parse_subtasks(task_data["subtasks"], idx)
+                task.subtasks = self._parse_subtasks(task_data["subtasks"])
             
             tasks.append(task)
         
         return tasks
     
-    def _parse_subtasks(self, subtasks_data: List[Dict], parent_id: int) -> List[Task]:
+    def _parse_subtasks(self, subtasks_data: List[Dict]) -> List[Task]:
         """Parse subtasks recursively"""
         subtasks = []
         for idx, subtask_data in enumerate(subtasks_data):
@@ -172,6 +172,45 @@ Use 3-10 tasks depending on complexity."""
             )
             subtasks.append(subtask)
         return subtasks
+
+    def load_plan(self, tasks_data: List[Dict]) -> List[Task]:
+        """
+        Load an existing plan from serialized task dictionaries.
+
+        Args:
+            tasks_data: List of dictionaries previously produced via Task.to_dict().
+
+        Returns:
+            The list of Task objects with statuses restored for resumption.
+        """
+        loaded_tasks: List[Task] = []
+        for idx, task_data in enumerate(tasks_data):
+            status_value = task_data.get("status", TaskStatus.PENDING.value)
+            try:
+                status = TaskStatus(status_value)
+            except ValueError:
+                status = TaskStatus.PENDING
+            task_id = task_data.get("id")
+            if task_id is None:
+                task_id = self.task_counter
+                self.task_counter += 1
+            else:
+                self.task_counter = max(self.task_counter, task_id + 1)
+            task = Task(
+                id=task_id,
+                title=task_data.get("title", f"Task {idx}"),
+                description=task_data.get("description", ""),
+                dependencies=task_data.get("dependencies", []),
+                status=status,
+                result=task_data.get("result"),
+                error=task_data.get("error"),
+            )
+            if task_data.get("subtasks"):
+                task.subtasks = self._parse_subtasks(task_data.get("subtasks", []))
+            loaded_tasks.append(task)
+
+        self.tasks = loaded_tasks
+        return self.tasks
     
     def get_next_task(self) -> Optional[Task]:
         """Get the next task to execute"""

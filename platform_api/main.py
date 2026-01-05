@@ -9,6 +9,8 @@ import asyncio
 import json
 import logging
 import time
+import hashlib
+import sqlite3
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -36,6 +38,60 @@ logger = logging.getLogger("platform_api")
 agent_manager: Optional[AgentManager] = None
 project_db: Optional[ProjectDatabase] = None
 DEFAULT_AGENT_ID = "default-agent"
+
+def _derive_project_id(agent_id: str, workspace_path: str) -> str:
+    """
+    Create a stable project ID derived from the agent identifier and workspace path.
+
+    Args:
+        agent_id: Identifier for the agent session.
+        workspace_path: Absolute or relative workspace root for the project.
+
+    Returns:
+        A deterministic string composed of the agent ID and a SHA-256 hash prefix
+        of the normalized workspace path so chat history persists per project.
+    """
+    digest = hashlib.sha256(os.path.abspath(workspace_path).encode("utf-8")).hexdigest()[:12]
+    return f"{agent_id}-{digest}"
+
+def _ensure_project_record(session: AgentSession) -> Optional[str]:
+    """
+    Ensure there is a project record for the agent workspace.
+
+    Args:
+        session: The active AgentSession whose workspace should map to a project row.
+
+    Returns:
+        The project ID associated with the workspace, creating one if necessary.
+        Returns None when the database is unavailable.
+    """
+    if not project_db:
+        return None
+
+    project = project_db.get_project_by_path(session.workspace.root_dir)
+    if project:
+        return project["id"]
+
+    project_id = _derive_project_id(session.id, session.workspace.root_dir)
+    try:
+        project_db.create_project(
+            project_id=project_id,
+            description=session.name,
+            project_type="web",
+            provider=session.provider_name,
+            model=session.model,
+        )
+    except sqlite3.IntegrityError as exc:
+        logger.error("Failed to create project mapping for %s", session.workspace.root_dir, exc_info=exc)
+        # If already exists, continue
+        existing = project_db.get_project(project_id)
+        if existing:
+            project_db.update_artifact_path(project_id, session.workspace.root_dir)
+            return project_id
+        return None
+
+    project_db.update_artifact_path(project_id, session.workspace.root_dir)
+    return project_id
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -176,6 +232,8 @@ class WorkflowRequest(BaseModel):
     requirements: Dict[str, Any] = {}
     generate_tests: bool = False
     validate_code: bool = False
+    resume: bool = False
+    updated_instructions: Optional[str] = None
 
 class TerminalCommandRequest(BaseModel):
     command: str
@@ -196,6 +254,9 @@ class ProcessMessageResponse(BaseModel):
     action: Optional[str] = None  # null, run_code, create_project, analyze_code
     requires_confirmation: bool = False
     project_config: Optional[Dict[str, Any]] = None  # {description, type, requirements}
+
+class InterruptRequest(BaseModel):
+    note: Optional[str] = None
 
 
 # --- WebSocket Manager ---
@@ -408,11 +469,48 @@ async def run_workflow(agent_id: str, request: WorkflowRequest):
             project_type=request.project_type,
             requirements=request.requirements,
             generate_tests=request.generate_tests,
-            validate_code=request.validate_code
+            validate_code=request.validate_code,
+            resume=request.resume,
+            updated_instructions=request.updated_instructions,
         )
     )
     
     return {"status": "started", "agent_id": agent_id}
+
+
+@app.post("/api/agents/{agent_id}/interrupt")
+async def interrupt_agent(agent_id: str, request: InterruptRequest):
+    if not agent_manager:
+        raise HTTPException(status_code=503, detail="AgentManager not initialized")
+    try:
+        session = agent_manager.request_interrupt(agent_id, request.note)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return {"status": "interrupt_requested", "agent_id": session.id, "note": request.note}
+
+
+@app.post("/api/agents/{agent_id}/workflow/resume")
+async def resume_workflow(agent_id: str, request: WorkflowRequest):
+    """Resume a paused workflow with optional updated instructions."""
+    if not agent_manager:
+        raise HTTPException(status_code=503, detail="AgentManager not initialized")
+    session = agent_manager.agents.get(agent_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    asyncio.create_task(
+        agent_manager.run_workflow(
+            agent=session,
+            description=request.description,
+            project_type=request.project_type,
+            requirements=request.requirements,
+            generate_tests=request.generate_tests,
+            validate_code=request.validate_code,
+            resume=True,
+            updated_instructions=request.updated_instructions,
+        )
+    )
+    return {"status": "resuming", "agent_id": agent_id}
 
 # ==================== Intelligent Message Processing ====================
 
@@ -577,39 +675,57 @@ async def process_message(agent_id: str, request: ProcessMessageRequest):
 
 
 @app.get("/api/agents/{agent_id}/workspace/files")
-async def list_files(agent_id: str, path: str = "."):
+async def list_files(agent_id: str, path: str = ".", depth: int = 3):
     if not agent_manager:
         raise HTTPException(status_code=503, detail="AgentManager not initialized")
     session = agent_manager.agents.get(agent_id)
     if not session:
         raise HTTPException(status_code=404, detail="Agent not found")
     
-    # Simple recursive walker
+    try:
+        base_path = Path(session.workspace.root_dir).resolve()
+        start_path = Path(session.workspace._resolve_path(path)).resolve()
+        relative_root = start_path.relative_to(base_path)
+    except (ValueError, OSError):
+        logger.warning("Invalid workspace path requested", exc_info=True)
+        raise HTTPException(status_code=400, detail="Invalid path")
+
     tree = []
-    root_path = Path(session.workspace.root_dir).resolve()
-    
-    for root, dirs, files in os.walk(root_path):
-        # Skip git and hidden
-        dirs[:] = [d for d in dirs if not d.startswith('.')]
-        
-        rel_root = os.path.relpath(root, root_path)
-        if rel_root == ".":
-            rel_root = ""
-            
+    max_depth = max(depth, 1)
+
+    for root, dirs, files in os.walk(start_path):
+        current = Path(root)
+        rel_depth = len(current.relative_to(start_path).parts)
+        if rel_depth > max_depth:
+            dirs[:] = []
+
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+
         for d in dirs:
-            tree.append({
-                "name": d,
-                "type": "directory",
-                "path": os.path.join(rel_root, d).replace("\\", "/")
-            })
+            entry = current / d
+            rel_path = entry.relative_to(base_path).as_posix()
+            tree.append({"name": entry.name, "type": "directory", "path": rel_path})
+
         for f in files:
-            tree.append({
-                "name": f,
-                "type": "file",
-                "path": os.path.join(rel_root, f).replace("\\", "/")
-            })
-            
-    # Sort: directories first, then files
+            if f.startswith("."):
+                continue
+            entry = current / f
+            rel_path = entry.relative_to(base_path).as_posix()
+            try:
+                stat = entry.stat()
+            except (FileNotFoundError, PermissionError):
+                continue
+            tree.append(
+                {
+                    "name": entry.name,
+                    "type": "file",
+                    "path": rel_path,
+                    "size": stat.st_size,
+                    "modified": stat.st_mtime,
+                }
+            )
+
     tree.sort(key=lambda x: (x["type"] != "directory", x["path"]))
     return tree
 
@@ -676,10 +792,10 @@ async def get_chat_history(agent_id: str, limit: int = 100):
         session = agent_manager.agents.get(agent_id)
         if session:
             # Look up project by path
-            project = project_db.get_project_by_path(session.workspace.root_dir)
-            if project:
-                history = project_db.get_chat_history(project["id"], limit=limit)
-                return {"history": history, "project_id": project["id"]}
+            project_id = _ensure_project_record(session)
+            if project_id:
+                history = project_db.get_chat_history(project_id, limit=limit)
+                return {"history": history, "project_id": project_id}
     
     # Fallback: return empty history
     return {"history": [], "project_id": None}
@@ -697,21 +813,9 @@ async def add_chat_message(agent_id: str, request: ChatMessageRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Agent not found")
     
-    # Look up or create project
-    project = project_db.get_project_by_path(session.workspace.root_dir)
-    if not project:
-        # Create project entry if missing
-        project_id = agent_id
-        project_db.create_project(
-            project_id=project_id,
-            description=session.name,
-            project_type="web",
-            provider=session.provider_name,
-            model=session.model
-        )
-        project_db.update_artifact_path(project_id, session.workspace.root_dir)
-    else:
-        project_id = project["id"]
+    project_id = _ensure_project_record(session)
+    if not project_id:
+        raise HTTPException(status_code=500, detail="Could not prepare chat storage")
     
     # Add message
     msg_id = project_db.add_chat_message(project_id, request.role, request.content)
@@ -727,9 +831,9 @@ async def clear_chat_history(agent_id: str):
     if agent_manager:
         session = agent_manager.agents.get(agent_id)
         if session:
-            project = project_db.get_project_by_path(session.workspace.root_dir)
-            if project:
-                project_db.clear_chat_history(project["id"])
+            project_id = _ensure_project_record(session)
+            if project_id:
+                project_db.clear_chat_history(project_id)
                 return {"status": "cleared"}
     
     return {"status": "no history found"}

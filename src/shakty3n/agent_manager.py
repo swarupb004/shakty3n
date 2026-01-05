@@ -192,6 +192,7 @@ class AgentSession:
     model: Optional[str] = None
     status: str = "idle"
     last_result: Optional[Dict[str, Any]] = None
+    pending_update: Optional[str] = None
 
     def request_approval(self, summary: str, changes: Dict[str, Any]) -> HumanApproval:
         return self.workspace.request_approval(summary, changes)
@@ -242,6 +243,8 @@ class AgentManager:
         requirements: Optional[Dict[str, Any]] = None,
         generate_tests: bool = False,
         validate_code: bool = False,
+        resume: bool = False,
+        updated_instructions: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Plan, execute, and verify a workflow asynchronously."""
         agent.status = "running"
@@ -265,11 +268,16 @@ class AgentManager:
                 requirements=requirements or {},
                 generate_tests=generate_tests,
                 validate_code=validate_code,
-                on_log=on_log
+                on_log=on_log,
+                resume=resume,
+                updated_instructions=updated_instructions,
             ),
         )
 
-        agent.status = "completed" if result.get("success") else "failed"
+        if result.get("status") == "interrupted":
+            agent.status = "interrupted"
+        else:
+            agent.status = "completed" if result.get("success") else "failed"
         agent.last_result = result
         plan_rel_path = os.path.join("artifacts", "plans", f"{agent.id}.json")
         plan_path = agent.workspace._resolve_path(plan_rel_path)
@@ -334,6 +342,8 @@ class AgentManager:
                     requirements=run.get("requirements"),
                     generate_tests=run.get("generate_tests", False),
                     validate_code=run.get("validate_code", False),
+                    resume=run.get("resume", False),
+                    updated_instructions=run.get("updated_instructions"),
                 )
             )
         return await asyncio.gather(*tasks)
@@ -368,3 +378,13 @@ class AgentManager:
             "agents": agents_snapshot,
             "timestamp": time.time(),
         }
+
+    def request_interrupt(self, agent_id: str, note: Optional[str] = None) -> AgentSession:
+        """Signal an agent to pause execution with an optional note."""
+        session = self.agents.get(agent_id)
+        if not session:
+            raise ValueError("Agent not found")
+        session.executor.request_interrupt(note)
+        session.pending_update = note
+        session.status = "interrupt_requested"
+        return session

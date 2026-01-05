@@ -3,8 +3,10 @@ Autonomous Execution Engine
 """
 from typing import Dict, Optional
 import ast
+import json
 import os
 import time
+from pathlib import Path
 from ..planner import TaskPlanner, TaskStatus
 from ..generators import (
     WebAppGenerator, AndroidAppGenerator, 
@@ -69,6 +71,7 @@ class AutonomousExecutor:
         os.makedirs(self.output_dir, exist_ok=True)
         self.artifacts_dir = os.path.join(self.output_dir, "artifacts")
         os.makedirs(self.artifacts_dir, exist_ok=True)
+        self.state_file = os.path.join(self.artifacts_dir, "plan_state.json")
         self.planner = TaskPlanner(ai_provider)
         self.debugger = AutoDebugger(ai_provider)
         self.on_log = None
@@ -80,6 +83,8 @@ class AutonomousExecutor:
         self.collaborator = CollaborativeOrchestrator()
         self.cicd = CICDOrchestrator()
         self.retry_counts: Dict[int, int] = {}
+        self._interrupt_requested = False
+        self._pending_update: Optional[str] = None
         
         # Initialize tools
         from .tools import ToolRegistry
@@ -96,17 +101,41 @@ class AutonomousExecutor:
         self.memory.set_preference("project_description", description)
         return intent
 
-    def execute_project(self, description: str, project_type: str, 
-                       requirements: Optional[Dict] = None, generate_tests: bool = False,
-                       validate_code: bool = False, on_log=None) -> Dict:
+    def execute_project(
+        self,
+        description: str,
+        project_type: str,
+        requirements: Optional[Dict] = None,
+        generate_tests: bool = False,
+        validate_code: bool = False,
+        on_log=None,
+        resume: bool = False,
+        updated_instructions: Optional[str] = None,
+    ) -> Dict:
         """Execute a project autonomously"""
         self.on_log = on_log
+        self._pending_update = updated_instructions
+        interrupted = False
+        # Clear interrupt flag when resuming
+        if resume:
+            self._interrupt_requested = False
         
         self._log("\n" + "="*60)
         self._log("ANTIGRAVITY AGENT - Starting Execution")
         self._log("="*60 + "\n")
 
         self.observer.start("intent_understanding")
+        state_payload = self._load_plan_state() if resume else None
+        if resume and state_payload:
+            description = description or state_payload.get("description")
+            project_type = project_type or state_payload.get("project_type")
+            requirements = requirements or state_payload.get("requirements", {})
+            self.planner.load_plan(state_payload.get("plan", []))
+        if updated_instructions:
+            self.memory.reflect(f"Instruction update received: {updated_instructions}")
+            requirements = requirements or {}
+            requirements["instruction_update"] = updated_instructions
+
         intent = self._analyze_intent(description, requirements or {})
         architecture = self.architect.design(intent, project_type)
         team = self.collaborator.build_team(intent)
@@ -119,7 +148,12 @@ class AutonomousExecutor:
         self._log("📋 Phase 1: Planning...")
         self.observer.start("planning")
         try:
-            tasks = self.planner.create_plan(description, project_type)
+            if not resume or not self.planner.tasks:
+                tasks = self.planner.create_plan(description, project_type)
+                self._persist_plan_state(description, project_type, requirements or {}, tasks)
+            else:
+                tasks = self.planner.tasks
+                self._persist_plan_state(description, project_type, requirements or {}, tasks)
             self._log(f"✓ Plan created with {len(tasks)} tasks")
             self._log(self.planner.get_plan_summary())
             self.memory.remember_decision("Plan created", {"task_count": len(tasks)})
@@ -137,6 +171,13 @@ class AutonomousExecutor:
         iteration = 0
         
         while not self.planner.is_plan_complete() and iteration < max_iterations:
+            if self._interrupt_requested:
+                interrupted = True
+                self.memory.reflect("Execution interrupted by user")
+                if self._pending_update:
+                    self.memory.reflect(f"Pending update: {self._pending_update}")
+                break
+
             iteration += 1
             task = self.planner.get_next_task()
             if not task:
@@ -173,6 +214,7 @@ class AutonomousExecutor:
                 task.status.value,
                 {"task_id": task.id, "title": task.title, "status": task.status.value},
             )
+            self._persist_plan_state(description, project_type, requirements or {}, self.planner.tasks)
         
         # Phase 3: Finalization
         self._log("\n" + "="*60)
@@ -180,7 +222,7 @@ class AutonomousExecutor:
         self._log("="*60)
 
         validation_result = None
-        if validate_code:
+        if validate_code and not interrupted:
             self.observer.start("validation")
             validation_result = self._validate_code(project_type, self.output_dir, enabled=validate_code)
             self.observer.finish("validation", {"passed": validation_result.get("passed", False)})
@@ -190,9 +232,18 @@ class AutonomousExecutor:
 
         progress = self.planner.get_progress()
         observability = self.observer.snapshot(progress, validation_result, security_result)
+
+        if not interrupted:
+            if os.path.exists(self.state_file):
+                try:
+                    os.remove(self.state_file)
+                except OSError as err:
+                    self._log(f"State cleanup skipped: {err}")
+            self._interrupt_requested = False
         
         return {
-            "success": self.planner.is_plan_complete(),
+            "success": self.planner.is_plan_complete() and not interrupted,
+            "status": "interrupted" if interrupted else "completed",
             "plan": [task.to_dict() for task in self.planner.tasks],
             "generation": {"output_dir": self.output_dir, "success": True},
             "intent": {
@@ -411,3 +462,44 @@ Action: <tool_code>finish()</tool_code>
                 "error_count": 1,
                 "warning_count": 0
             }
+
+    def request_interrupt(self, note: Optional[str] = None) -> None:
+        """
+        Signal the executor to stop after the current task loop.
+
+        Args:
+            note: Optional human-readable context explaining why the pause was requested.
+        """
+        self._pending_update = note
+        self._interrupt_requested = True
+
+    def _persist_plan_state(self, description: str, project_type: str, requirements: Dict, tasks) -> None:
+        """
+        Persist the current plan state for resumable execution.
+
+        The payload includes the intent description, project type, requirements,
+        and the serialized task list so a later run can continue where it stopped.
+        """
+        payload = {
+            "description": description,
+            "project_type": project_type,
+            "requirements": requirements,
+            "plan": [t.to_dict() for t in tasks],
+        }
+        Path(self.artifacts_dir).mkdir(parents=True, exist_ok=True)
+        Path(self.state_file).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def _load_plan_state(self) -> Optional[Dict]:
+        """
+        Load persisted plan state if present.
+
+        Returns:
+            Dict containing description, project_type, requirements, and plan fields,
+            or None when no state is available or it fails to load cleanly.
+        """
+        if not os.path.exists(self.state_file):
+            return None
+        try:
+            return json.loads(Path(self.state_file).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
