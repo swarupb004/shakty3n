@@ -260,25 +260,42 @@ class AgentManager:
                  agent.workspace._record_event, "terminal", msg
              )
         
-        result = await loop.run_in_executor(
-            None,
-            lambda: agent.executor.execute_project(
-                description=description,
-                project_type=project_type,
-                requirements=requirements or {},
-                generate_tests=generate_tests,
-                validate_code=validate_code,
-                on_log=on_log,
-                resume=resume,
-                updated_instructions=updated_instructions,
-            ),
-        )
+        # Helper to bridge progress events to workspace
+        def on_progress(p_data: Dict[str, Any]):
+             # Record as a workflow_progress event
+             loop.call_soon_threadsafe(
+                 agent.workspace._record_event, "workflow_progress", "Updating progress", {"progress": p_data}
+             )
+
+        try:
+            result = await loop.run_in_executor(
+                None,
+                lambda: agent.executor.execute_project(
+                    description=description,
+                    project_type=project_type,
+                    requirements=requirements or {},
+                    generate_tests=generate_tests,
+                    validate_code=validate_code,
+                    on_log=on_log,
+                    on_progress=on_progress,
+                    resume=resume,
+                    updated_instructions=updated_instructions,
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Error in workflow execution: {e}", exc_info=True)
+            result = {
+                "success": False,
+                "error": str(e),
+                "progress": {"total": 0, "completed": 0, "percentage": 0}
+            }
 
         if result.get("status") == "interrupted":
             agent.status = "interrupted"
         else:
             agent.status = "completed" if result.get("success") else "failed"
         agent.last_result = result
+
         plan_rel_path = os.path.join("artifacts", "plans", f"{agent.id}.json")
         plan_path = agent.workspace._resolve_path(plan_rel_path)
         os.makedirs(os.path.dirname(plan_path), exist_ok=True)
@@ -326,7 +343,15 @@ class AgentManager:
             changes = {"confidence": confidence, "security": security}
             agent.workspace.request_approval(summary, changes)
 
-        agent.workspace._record_event("workflow_finished", agent.status, {"progress": result.get("progress", {})})
+        agent.workspace._record_event(
+            "workflow_finished", 
+            agent.status, 
+            {
+                "progress": result.get("progress", {}),
+                "error": result.get("error"),
+                "message": result.get("error")
+            }
+        )
         return result
 
     async def run_parallel(self, runs: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:

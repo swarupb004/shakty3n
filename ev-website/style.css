@@ -1,0 +1,231 @@
+:root {
+    --bg-color: #050505;
+    --text-color: #ffffff;
+    --accent-color: #39FF14; /* Neon Green */
+    --accent-glow: rgba(57, 255, 20, 0.4);
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --font-main: 'Outfit', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    overflow-x: hidden;
+    line-height: 1.6;
+}
+
+/* Navigation */
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem 10%;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.logo span {
+    color: var(--accent-color);
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+    gap: 3rem;
+    align-items: center;
+}
+
+nav a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: var(--accent-color);
+}
+
+.cta {
+    background: var(--accent-color);
+    color: #000 !important;
+    padding: 0.6rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+/* Hero Section */
+.hero {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 0 10%;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-content {
+    flex: 1;
+    z-index: 10;
+}
+
+h1 {
+    font-size: 4.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 2rem;
+}
+
+.highlight {
+    color: var(--accent-color);
+    text-shadow: 0 0 20px var(--accent-glow);
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    max-width: 500px;
+    margin-bottom: 3rem;
+    color: rgba(255,255,255,0.7);
+}
+
+.hero-btns {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.btn {
+    padding: 1rem 2.5rem;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: var(--accent-color);
+    color: #000;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 0 30px var(--accent-glow);
+    transform: translateY(-5px);
+}
+
+.btn-secondary {
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+/* Hero Image & Effects */
+.hero-image-container {
+    flex: 1.5;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-image {
+    width: 140%;
+    z-index: 2;
+    mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
+}
+
+.glow-sphere {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    z-index: 1;
+    filter: blur(50px);
+}
+
+/* Specs Section */
+.specs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    padding: 5rem 10%;
+    background: linear-gradient(to top, #000, var(--bg-color));
+}
+
+.spec-card {
+    background: var(--card-bg);
+    padding: 3rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+    text-align: center;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.6s ease;
+}
+
+.spec-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.spec-card h3 {
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 1rem;
+}
+
+.spec-card .value {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+footer {
+    padding: 4rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.3);
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Animations */
+.fade-in {
+    opacity: 0;
+    animation: fadeIn 1s forwards ease-out;
+}
+
+.delay { animation-delay: 0.3s; }
+.delay-2 { animation-delay: 0.6s; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1024px) {
+    .hero { flex-direction: column; text-align: center; height: auto; padding-top: 8rem; }
+    h1 { font-size: 3rem; }
+    .hero-content p { margin: 0 auto 2rem; }
+    .hero-btns { justify-content: center; margin-bottom: 4rem; }
+    .specs { grid-template-columns: 1fr; }
+}

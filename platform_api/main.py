@@ -234,6 +234,7 @@ class WorkflowRequest(BaseModel):
     validate_code: bool = False
     resume: bool = False
     updated_instructions: Optional[str] = None
+    use_structured_planning: bool = True  # Enable 7-phase structured planning
 
 class TerminalCommandRequest(BaseModel):
     command: str
@@ -461,6 +462,14 @@ async def run_workflow(agent_id: str, request: WorkflowRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Agent not found")
     
+    # Configure structured planning based on request
+    session.executor.use_structured_planning = request.use_structured_planning
+    if request.use_structured_planning and not session.executor.structured_planner:
+        from shakty3n.planner import StructuredPlanner
+        session.executor.structured_planner = StructuredPlanner(session.executor.ai_provider)
+    
+    logger.info(f"Starting workflow with structured_planning={request.use_structured_planning}")
+    
     # Run in background to not block
     asyncio.create_task(
         agent_manager.run_workflow(
@@ -475,7 +484,7 @@ async def run_workflow(agent_id: str, request: WorkflowRequest):
         )
     )
     
-    return {"status": "started", "agent_id": agent_id}
+    return {"status": "started", "agent_id": agent_id, "structured_planning": request.use_structured_planning}
 
 
 @app.post("/api/agents/{agent_id}/interrupt")
@@ -626,8 +635,41 @@ async def process_message(agent_id: str, request: ProcessMessageRequest):
     except Exception as e:
         logger.error(f"Error processing message: {e}")
         # Fallback to simple keyword matching if AI fails
+        # IMPORTANT: Check project_creation FIRST since it's more specific
         lower_msg = user_message.lower()
         
+        # Project creation keywords - check these FIRST (most specific)
+        project_keywords = [
+            "build", "create", "make", "develop", "generate", 
+            "app", "website", "application", "project", "page",
+            "todo", "dashboard", "landing", "portfolio", "api",
+            "showcase", "store", "blog", "forum", "chat"
+        ]
+        if any(word in lower_msg for word in project_keywords):
+            # Infer project type from message
+            project_type = "web-react"  # default
+            if any(w in lower_msg for w in ["html", "static", "simple", "landing"]):
+                project_type = "html"
+            elif any(w in lower_msg for w in ["android", "kotlin"]):
+                project_type = "android"
+            elif any(w in lower_msg for w in ["ios", "swift", "iphone"]):
+                project_type = "ios"
+            elif any(w in lower_msg for w in ["flutter", "dart"]):
+                project_type = "flutter"
+            
+            return ProcessMessageResponse(
+                intent="project_creation",
+                response=f"🚀 I'll create that for you! Starting: '{user_message}'",
+                action="create_project",
+                requires_confirmation=True,
+                project_config={
+                    "description": user_message,
+                    "type": project_type,
+                    "requirements": {}
+                }
+            )
+        
+        # Greetings
         if any(word in lower_msg for word in ["hello", "hi", "hey", "thanks", "thank you", "bye"]):
             return ProcessMessageResponse(
                 intent="greeting",
@@ -636,15 +678,9 @@ async def process_message(agent_id: str, request: ProcessMessageRequest):
                 requires_confirmation=False,
                 project_config=None
             )
-        elif any(word in lower_msg for word in ["how", "what", "why", "explain", "help"]):
-            return ProcessMessageResponse(
-                intent="question",
-                response=f"I'd be happy to help! Let me think about your question: '{user_message}'",
-                action=None,
-                requires_confirmation=False,
-                project_config=None
-            )
-        elif any(word in lower_msg for word in ["run", "execute", "start", "test"]):
+        
+        # Commands
+        if any(word in lower_msg for word in ["run", "execute", "start", "test"]):
             return ProcessMessageResponse(
                 intent="command",
                 response="I'll help you run that. What specific command would you like me to execute?",
@@ -652,26 +688,29 @@ async def process_message(agent_id: str, request: ProcessMessageRequest):
                 requires_confirmation=False,
                 project_config=None
             )
-        elif any(word in lower_msg for word in ["build", "create", "make", "develop", "app", "website"]):
+        
+        # Questions - check LAST as catch-all for inquiries
+        if any(word in lower_msg for word in ["how", "what", "why", "explain", "help", "?"]):
             return ProcessMessageResponse(
-                intent="project_creation",
-                response=f"I can help you create that! Before I start, let me confirm: You want me to build '{user_message}'. Is that correct?",
-                action="create_project",
-                requires_confirmation=True,
-                project_config={
-                    "description": user_message,
-                    "type": "web-react",
-                    "requirements": {}
-                }
-            )
-        else:
-            return ProcessMessageResponse(
-                intent="clarification", 
-                response="I'm here to help! Could you tell me more about what you'd like to do?",
+                intent="question",
+                response=f"I'd be happy to help! Let me think about your question: '{user_message}'",
                 action=None,
                 requires_confirmation=False,
                 project_config=None
             )
+        
+        # Default: assume it's a project if it's a declarative statement
+        return ProcessMessageResponse(
+            intent="project_creation", 
+            response=f"🚀 I'll create that for you! Starting: '{user_message}'",
+            action="create_project",
+            requires_confirmation=True,
+            project_config={
+                "description": user_message,
+                "type": "web-react",
+                "requirements": {}
+            }
+        )
 
 
 @app.get("/api/agents/{agent_id}/workspace/files")

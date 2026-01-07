@@ -7,7 +7,10 @@ import json
 import os
 import time
 from pathlib import Path
-from ..planner import TaskPlanner, TaskStatus
+from ..planner import TaskPlanner, TaskStatus, StructuredPlanner, PlanningOutput
+from .reflexion import ReflexionAgent
+from .response_validator import ResponseValidator
+from .completion_verifier import CompletionVerifier
 from ..generators import (
     WebAppGenerator, AndroidAppGenerator, 
     IOSAppGenerator, DesktopAppGenerator, FlutterAppGenerator,
@@ -65,14 +68,17 @@ def _is_simple_request(description: str, project_type: str) -> bool:
 class AutonomousExecutor:
     """Autonomous execution engine using ReAct loop"""
     
-    def __init__(self, ai_provider, output_dir: str = "./generated_projects"):
+    def __init__(self, ai_provider, output_dir: str = "./generated_projects", use_structured_planning: bool = True):
         self.ai_provider = ai_provider
         self.output_dir = os.path.abspath(output_dir)
         os.makedirs(self.output_dir, exist_ok=True)
         self.artifacts_dir = os.path.join(self.output_dir, "artifacts")
         os.makedirs(self.artifacts_dir, exist_ok=True)
         self.state_file = os.path.join(self.artifacts_dir, "plan_state.json")
+        self.structured_plan_file = os.path.join(self.artifacts_dir, "structured_plan.json")
         self.planner = TaskPlanner(ai_provider)
+        self.structured_planner = StructuredPlanner(ai_provider) if use_structured_planning else None
+        self.use_structured_planning = use_structured_planning
         self.debugger = AutoDebugger(ai_provider)
         self.on_log = None
         self.intent_analyzer = IntentAnalyzer(ai_provider)
@@ -85,6 +91,12 @@ class AutonomousExecutor:
         self.retry_counts: Dict[int, int] = {}
         self._interrupt_requested = False
         self._pending_update: Optional[str] = None
+        self._structured_plan: Optional[PlanningOutput] = None
+        
+        # Self-correction components
+        self.reflexion = ReflexionAgent(ai_provider, max_retries=3)
+        self.response_validator = ResponseValidator()
+        self.completion_verifier = CompletionVerifier(ai_provider)
         
         # Initialize tools
         from .tools import ToolRegistry
@@ -109,6 +121,7 @@ class AutonomousExecutor:
         generate_tests: bool = False,
         validate_code: bool = False,
         on_log=None,
+        on_progress=None,
         resume: bool = False,
         updated_instructions: Optional[str] = None,
     ) -> Dict:
@@ -144,22 +157,49 @@ class AutonomousExecutor:
         self.team = team
         self.observer.finish("intent_understanding", {"success_criteria": len(intent.success_criteria)})
         
-        # Phase 1: Planning
+        # Phase 1: Planning (using structured 7-phase planner if enabled)
         self._log("📋 Phase 1: Planning...")
         self.observer.start("planning")
         try:
             if not resume or not self.planner.tasks:
-                tasks = self.planner.create_plan(description, project_type)
-                self._persist_plan_state(description, project_type, requirements or {}, tasks)
+                if self.use_structured_planning and self.structured_planner:
+                    # Use new 7-phase structured planning
+                    self._log("🔬 Using structured 7-phase planning...")
+                    self._structured_plan = self.structured_planner.create_structured_plan(
+                        description=description,
+                        project_type=project_type,
+                        requirements=requirements or {},
+                    )
+                    self._log(self._structured_plan.get_summary())
+                    self._persist_structured_plan(self._structured_plan)
+                    
+                    # Convert structured plan tasks to TaskPlanner format
+                    task_dicts = self._structured_plan.get_tasks_for_executor()
+                    tasks = self.planner._parse_tasks(task_dicts)
+                    self.planner.tasks = tasks
+                    self._persist_plan_state(description, project_type, requirements or {}, tasks)
+                    self.memory.remember_decision("Structured plan created", {
+                        "task_count": len(tasks),
+                        "plan_valid": self._structured_plan.validation_checklist.is_valid,
+                        "complexity": self._structured_plan.risk_analysis.complexity_score,
+                    })
+                else:
+                    # Fallback to original simple planning
+                    tasks = self.planner.create_plan(description, project_type)
+                    self._persist_plan_state(description, project_type, requirements or {}, tasks)
+                    self.memory.remember_decision("Plan created", {"task_count": len(tasks)})
             else:
                 tasks = self.planner.tasks
                 self._persist_plan_state(description, project_type, requirements or {}, tasks)
             self._log(f"✓ Plan created with {len(tasks)} tasks")
             self._log(self.planner.get_plan_summary())
-            self.memory.remember_decision("Plan created", {"task_count": len(tasks)})
         except Exception as e:
             return self._handle_error("Planning", str(e))
         self.observer.finish("planning", {"tasks": len(tasks)})
+        
+        # Emit progress update after planning
+        if on_progress:
+            on_progress(self.planner.get_progress())
         
         # Phase 2: Execution (ReAct Loop)
         self._log("\n⚡ Phase 2: Autonomous Intent Execution...")
@@ -214,6 +254,11 @@ class AutonomousExecutor:
                 task.status.value,
                 {"task_id": task.id, "title": task.title, "status": task.status.value},
             )
+            
+            # Emit progress update
+            if on_progress:
+                on_progress(self.planner.get_progress())
+                
             self._persist_plan_state(description, project_type, requirements or {}, self.planner.tasks)
         
         # Phase 3: Finalization
@@ -277,22 +322,59 @@ class AutonomousExecutor:
         history = []
         max_steps = 15
         
-        system_prompt = f"""You are an expert autonomous developer.
-        
+        system_prompt = f"""You are an autonomous code-writing AI agent. You MUST write actual code and execute commands.
+
+AVAILABLE TOOLS:
 {self.tools.get_tool_definitions()}
 
-Your Goal: Complete the task: "{task.title}"
-Description: {task.description}
-Context: {project_context}
+YOUR TASK: {task.title}
+DESCRIPTION: {task.description}
+PROJECT CONTEXT: {project_context}
 
-Follow this cycle:
-1. Thought: Plan your next step.
-2. Action: Use a tool if needed. e.g. <tool_code>run_command("ls")</tool_code>
-3. Observation: I will provide the result.
+CRITICAL FORMAT RULES:
+You MUST respond in this EXACT format every time:
 
-When you are done, output:
+Thought: [One sentence about what you will do next]
+Action: <tool_code>TOOL_CALL_HERE</tool_code>
+
+EXAMPLES OF CORRECT RESPONSES:
+
+Example 1 - Create a file:
+Thought: I will create the index.html file with the main structure.
+Action: <tool_code>write_file("index.html", '''<!DOCTYPE html>
+<html>
+<head><title>EV Showcase</title></head>
+<body><h1>Welcome</h1></body>
+</html>''')</tool_code>
+
+Example 2 - Run a command:
+Thought: I will initialize the npm project.
+Action: <tool_code>run_command("npm init -y")</tool_code>
+
+Example 3 - Read a file:
+Thought: I will check the contents of package.json.
+Action: <tool_code>read_file("package.json")</tool_code>
+
+Example 4 - Finish the task:
+Thought: All files are created and the task is complete.
 Action: <tool_code>finish()</tool_code>
+
+RULES:
+1. ALWAYS use <tool_code>TOOL_CALL</tool_code> tags - this is REQUIRED
+2. NEVER just describe what you would do - ACTUALLY DO IT
+3. Write REAL code, not pseudocode or descriptions
+4. Create files one at a time using write_file()
+5. After creating all necessary files, call finish()
+
+DO NOT:
+- Write long explanations about what you could do
+- Mention commands without using <tool_code> tags
+- Say "I would run..." - instead ACTUALLY run it
+- Skip the Action line
+
+START NOW. First, think about what file to create, then create it with write_file().
 """
+
 
         for i in range(max_steps):
             # Construct prompt
@@ -311,20 +393,45 @@ Action: <tool_code>finish()</tool_code>
                 response = "Thought: " + response
                 
             self._log(f"🤖 {response}")
+            self._last_ai_response = response  # Store for reflection
             history.append(response)
             
             # Extract tool usage
             tool_code = self._extract_tool_code(response)
             
             if not tool_code:
-                # Agent just thought, didn't act. 
-                # If it says "finish", we are done.
-                if "finish()" in response or "finished" in response.lower():
-                    return True
-                continue
+                # Agent didn't use proper format - remind it
+                if i < max_steps - 1:
+                    # Check if it tried to finish without proper format
+                    if "finish" in response.lower():
+                        # Only allow finish if we actually did something
+                        files_exist = len(os.listdir(self.output_dir)) > 0
+                        if files_exist:
+                            self._log("✓ Task appears complete (files exist)")
+                            return True
+                        else:
+                            reminder = "Observation: You said 'finish' but no files were created. You MUST use <tool_code>write_file(...)</tool_code> to create files first. Try again with the correct format."
+                            history.append(reminder)
+                            self._log(f"⚠️ {reminder}")
+                            continue
+                    else:
+                        # No tool code found - remind the agent
+                        reminder = "Observation: No tool was used. Remember: You MUST use Action: <tool_code>TOOL(...)</tool_code> format. Example: <tool_code>write_file(\"index.html\", \"<html>...</html>\")</tool_code>"
+                        history.append(reminder)
+                        self._log(f"⚠️ {reminder}")
+                        continue
+                else:
+                    return False
                 
             if "finish()" in tool_code:
-                return True
+                # Check if we actually created files
+                files_exist = len([f for f in os.listdir(self.output_dir) if not f.startswith('.')]) > 0
+                if files_exist:
+                    return True
+                else:
+                    reminder = "Observation: Cannot finish - no files created. Use write_file() to create at least one file."
+                    history.append(reminder)
+                    continue
                 
             # Execute tool
             observation = self._execute_tool_code(tool_code)
@@ -333,6 +440,7 @@ Action: <tool_code>finish()</tool_code>
             history.append(f"Observation: {observation}")
             
         return False
+
 
     def _extract_tool_code(self, text: str) -> Optional[str]:
         """Extract code from within <tool_code> tags"""
@@ -503,3 +611,165 @@ Action: <tool_code>finish()</tool_code>
             return json.loads(Path(self.state_file).read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return None
+
+    def _persist_structured_plan(self, plan: PlanningOutput) -> None:
+        """
+        Persist the full structured plan for debugging and analysis.
+
+        Args:
+            plan: The complete PlanningOutput from structured planner
+        """
+        Path(self.artifacts_dir).mkdir(parents=True, exist_ok=True)
+        Path(self.structured_plan_file).write_text(
+            json.dumps(plan.to_dict(), indent=2),
+            encoding="utf-8"
+        )
+
+    def _execute_react_task_with_reflection(self, task, project_context: str) -> bool:
+        """
+        Enhanced ReAct with self-correction loop.
+        
+        Retries failed tasks with elaborated queries based on failure analysis.
+        """
+        max_retries = self.reflexion.max_retries
+        last_response = ""
+        
+        for attempt in range(max_retries):
+            # Execute the task
+            result = self._execute_react_task(task, project_context)
+            
+            if result:
+                return True
+            
+            # Get the last response for analysis (from memory/observer)
+            last_response = getattr(self, '_last_ai_response', '')
+            
+            # Self-reflect on the failure
+            reflection = self.reflexion.reflect_and_decide(
+                task=task.description,
+                response=last_response,
+                error=task.error if hasattr(task, 'error') else None,
+                attempt_number=attempt + 1
+            )
+            
+            if not reflection.should_retry:
+                self._log(f"❌ Giving up after {attempt + 1} attempts: {reflection.failure_reason[:100]}")
+                break
+            
+            # Update context with elaborated query
+            self._log(f"🔄 Retry {attempt + 1}/{max_retries}: {reflection.retry_strategy}")
+            self._log(f"   Critique: {reflection.critique[:100]}...")
+            
+            # Use elaborated query for next attempt
+            project_context = reflection.elaborated_query
+            
+            # Small delay between retries
+            time.sleep(1)
+        
+        return False
+
+    def execute_until_complete(
+        self,
+        description: str,
+        project_type: str,
+        requirements: Optional[Dict] = None,
+        max_completion_loops: int = 3,
+        **kwargs
+    ) -> Dict:
+        """
+        Execute autonomously until all features are complete.
+        
+        This method:
+        1. Runs the standard execution
+        2. Verifies all features from the plan exist
+        3. Generates tasks for any missing features
+        4. Repeats until all complete or max loops reached
+        
+        Args:
+            description: Project description
+            project_type: Type of project
+            requirements: Optional requirements
+            max_completion_loops: Max times to retry missing features
+            **kwargs: Additional args for execute_project
+            
+        Returns:
+            Final execution result with completion status
+        """
+        completion_loop = 0
+        
+        while completion_loop < max_completion_loops:
+            completion_loop += 1
+            self._log(f"\n{'='*60}")
+            self._log(f"AUTONOMOUS EXECUTION - Loop {completion_loop}/{max_completion_loops}")
+            self._log(f"{'='*60}")
+            
+            # Run standard execution
+            result = self.execute_project(
+                description=description,
+                project_type=project_type,
+                requirements=requirements,
+                **kwargs
+            )
+            
+            # If no structured plan, can't verify completion
+            if not self._structured_plan:
+                self._log("⚠️ No structured plan available for completion verification")
+                return result
+            
+            # Extract expected features from plan
+            expected_features = self.completion_verifier.extract_expected_features(
+                self._structured_plan.to_dict()
+            )
+            
+            if not expected_features:
+                self._log("✅ No specific features to verify")
+                return result
+            
+            # Verify features exist in output
+            verification = self.completion_verifier.verify_features_exist(
+                expected_features,
+                self.output_dir
+            )
+            
+            self._log(f"\n📋 Completion Check: {verification.confidence * 100:.0f}%")
+            self._log(f"   Verified: {len(verification.verified_features)}")
+            self._log(f"   Missing: {len(verification.missing_features)}")
+            
+            if verification.all_complete:
+                self._log("✅ All features verified!")
+                result["completion_verified"] = True
+                result["verified_features"] = verification.verified_features
+                return result
+            
+            # Generate tasks for missing features
+            if verification.missing_features:
+                self._log(f"\n⚠️ Generating tasks for {len(verification.missing_features)} missing features...")
+                
+                next_id = len(self.planner.tasks) + 1
+                new_tasks = self.completion_verifier.generate_missing_tasks(
+                    verification.missing_features,
+                    next_task_id=next_id
+                )
+                
+                # Convert to Task objects and add to planner
+                for gen_task in new_tasks:
+                    from ..planner import Task, TaskStatus
+                    task = Task(
+                        id=next_id,
+                        title=gen_task.title,
+                        description=gen_task.description,
+                        dependencies=gen_task.dependencies
+                    )
+                    self.planner.tasks.append(task)
+                    next_id += 1
+                
+                self._log(f"   Added {len(new_tasks)} new tasks")
+                
+                # Don't resume from state, start fresh with new tasks
+                kwargs['resume'] = False
+        
+        # Max loops reached
+        self._log(f"\n⚠️ Max completion loops ({max_completion_loops}) reached")
+        result["completion_verified"] = False
+        result["missing_features"] = verification.missing_features if verification else []
+        return result

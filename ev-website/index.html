@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Experience the future of electric vehicles with our cutting-edge EV showcase. Discover sustainable mobility solutions.">
+    <title>VoltDrive | The Future of Electric Mobility</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="grid-overlay"></div>
+        <div class="glow-orbs">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+        </div>
+        <div class="particle-container" id="particles"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">VoltDrive</span>
+            </a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#models" class="nav-link">Models</a></li>
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="#specs" class="nav-link">Specifications</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <button class="nav-cta">Book Test Drive</button>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="pulse"></span>
+                New 2026 Models Available
+            </div>
+            <h1 class="hero-title">
+                <span class="title-line">The Future of</span>
+                <span class="title-highlight">Electric Mobility</span>
+            </h1>
+            <p class="hero-subtitle">
+                Experience unprecedented power, unmatched efficiency, and revolutionary design.
+                Our electric vehicles redefine what's possible on the road.
+            </p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-value" data-target="650">0</span>
+                    <span class="stat-unit">km</span>
+                    <span class="stat-label">Range</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" data-target="2.1">0</span>
+                    <span class="stat-unit">s</span>
+                    <span class="stat-label">0-100 km/h</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" data-target="1020">0</span>
+                    <span class="stat-unit">hp</span>
+                    <span class="stat-label">Power</span>
+                </div>
+            </div>
+            <div class="hero-actions">
+                <button class="btn btn-primary">
+                    <span>Explore Models</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <span>Watch Film</span>
+                </button>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="car-showcase">
+                <div class="car-glow"></div>
+                <div class="car-silhouette">
+                    <svg viewBox="0 0 800 400" class="car-svg">
+                        <!-- Futuristic EV Car SVG -->
+                        <defs>
+                            <linearGradient id="carGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#0a0a0a" />
+                                <stop offset="50%" style="stop-color:#1a1a2e" />
+                                <stop offset="100%" style="stop-color:#0a0a0a" />
+                            </linearGradient>
+                            <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#00ff88;stop-opacity:0" />
+                                <stop offset="50%" style="stop-color:#00ff88;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#00ff88;stop-opacity:0" />
+                            </linearGradient>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <!-- Car Body -->
+                        <path
+                            d="M100 280 L150 280 L180 240 L280 200 L380 180 L550 180 L650 200 L700 240 L720 280 L100 280 Z"
+                            fill="url(#carGradient)" stroke="#00ff88" stroke-width="2" filter="url(#glow)" />
+                        <!-- Roof -->
+                        <path d="M250 200 L300 140 L500 140 L580 180 L280 200 Z" fill="#0d0d15" stroke="#00ff88"
+                            stroke-width="1.5" />
+                        <!-- Windows -->
+                        <path d="M260 195 L305 150 L490 150 L560 180 L285 195 Z" fill="#1a1a2e" stroke="#00ff88"
+                            stroke-width="1" opacity="0.8" />
+                        <!-- Headlight -->
+                        <ellipse cx="690" cy="250" rx="15" ry="10" fill="#00ff88" filter="url(#glow)"
+                            class="headlight" />
+                        <!-- Taillight -->
+                        <ellipse cx="120" cy="255" rx="12" ry="8" fill="#ff3366" filter="url(#glow)"
+                            class="taillight" />
+                        <!-- Wheels -->
+                        <circle cx="200" cy="280" r="45" fill="#111" stroke="#00ff88" stroke-width="2" />
+                        <circle cx="200" cy="280" r="25" fill="#1a1a2e" stroke="#00ff88" stroke-width="1" />
+                        <circle cx="200" cy="280" r="8" fill="#00ff88" />
+                        <circle cx="620" cy="280" r="45" fill="#111" stroke="#00ff88" stroke-width="2" />
+                        <circle cx="620" cy="280" r="25" fill="#1a1a2e" stroke="#00ff88" stroke-width="1" />
+                        <circle cx="620" cy="280" r="8" fill="#00ff88" />
+                        <!-- Ground reflection -->
+                        <line x1="80" y1="330" x2="740" y2="330" stroke="url(#glowGradient)" stroke-width="2"
+                            opacity="0.5" />
+                        <!-- Accent lines -->
+                        <path d="M180 260 L680 260" stroke="#00ff88" stroke-width="1" opacity="0.6" />
+                        <path d="M300 175 L540 175" stroke="#00ff88" stroke-width="1" opacity="0.4" />
+                    </svg>
+                </div>
+                <div class="car-reflection"></div>
+            </div>
+            <div class="floating-specs">
+                <div class="spec-card spec-1">
+                    <span class="spec-icon">🔋</span>
+                    <span class="spec-text">150 kWh Battery</span>
+                </div>
+                <div class="spec-card spec-2">
+                    <span class="spec-icon">⚡</span>
+                    <span class="spec-text">350kW Charging</span>
+                </div>
+                <div class="spec-card spec-3">
+                    <span class="spec-icon">🌍</span>
+                    <span class="spec-text">Zero Emissions</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <span>Scroll to Explore</span>
+            <div class="scroll-arrow"></div>
+        </div>
+    </section>
+
+    <!-- Models Section -->
+    <section class="models-section" id="models">
+        <div class="section-header">
+            <span class="section-tag">Our Fleet</span>
+            <h2 class="section-title">Choose Your <span>Electric Dream</span></h2>
+            <p class="section-subtitle">Discover our range of revolutionary electric vehicles designed for every journey
+            </p>
+        </div>
+        <div class="models-grid">
+            <div class="model-card" data-model="apex">
+                <div class="model-image">
+                    <div class="model-badge">New</div>
+                    <svg viewBox="0 0 400 200" class="model-svg">
+                        <defs>
+                            <linearGradient id="model1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#0a0f0a" />
+                                <stop offset="100%" style="stop-color:#1a2f1a" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M50 140 L80 140 L100 120 L150 100 L200 90 L300 90 L350 110 L370 130 L380 140 L50 140 Z"
+                            fill="url(#model1Grad)" stroke="#00ff88" stroke-width="2" />
+                        <path d="M130 100 L160 70 L280 70 L320 95 L150 100 Z" fill="#0a0a0a" stroke="#00ff88"
+                            stroke-width="1" />
+                        <circle cx="110" cy="140" r="22" fill="#111" stroke="#00ff88" stroke-width="2" />
+                        <circle cx="330" cy="140" r="22" fill="#111" stroke="#00ff88" stroke-width="2" />
+                    </svg>
+                </div>
+                <div class="model-content">
+                    <h3 class="model-name">VoltDrive Apex</h3>
+                    <p class="model-tagline">Ultimate Performance Sedan</p>
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="spec-value">650</span>
+                            <span class="spec-label">km Range</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="spec-value">2.1s</span>
+                            <span class="spec-label">0-100</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="spec-value">1020</span>
+                            <span class="spec-label">HP</span>
+                        </div>
+                    </div>
+                    <div class="model-price">
+                        <span class="price-label">Starting at</span>
+                        <span class="price-value">$89,990</span>
+                    </div>
+                    <button class="btn btn-model">Configure Now</button>
+                </div>
+            </div>
+
+            <div class="model-card featured" data-model="nova">
+                <div class="model-image">
+                    <div class="model-badge featured-badge">Featured</div>
+                    <svg viewBox="0 0 400 200" class="model-svg">
+                        <path d="M40 145 L70 145 L90 120 L140 95 L200 80 L300 80 L360 100 L385 135 L390 145 L40 145 Z"
+                            fill="#0a0f0a" stroke="#00ff88" stroke-width="2" />
+                        <path d="M120 95 L155 55 L290 55 L340 85 L145 95 Z" fill="#0a0a0a" stroke="#00ff88"
+                            stroke-width="1" />
+                        <circle cx="100" cy="145" r="25" fill="#111" stroke="#00ff88" stroke-width="2" />
+                        <circle cx="340" cy="145" r="25" fill="#111" stroke="#00ff88" stroke-width="2" />
+                    </svg>
+                </div>
+                <div class="model-content">
+                    <h3 class="model-name">VoltDrive Nova</h3>
+                    <p class="model-tagline">Luxury Electric SUV</p>
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="spec-value">580</span>
+                            <span class="spec-label">km Range</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="spec-value">3.2s</span>
+                            <span class="spec-label">0-100</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="spec-value">850</span>
+                            <span class="spec-label">HP</span>
+                        </div>
+                    </div>
+                    <div class="model-price">
+                        <span class="price-label">Starting at</span>
+                        <span class="price-value">$74,990</span>
+                    </div>
+                    <button class="btn btn-model">Configure Now</button>
+                </div>
+            </div>
+
+            <div class="model-card" data-model="pulse">
+                <div class="model-image">
+                    <svg viewBox="0 0 400 200" class="model-svg">
+                        <path d="M60 135 L85 135 L105 115 L155 100 L210 92 L290 92 L345 108 L365 125 L375 135 L60 135 Z"
+                            fill="#0a0f0a" stroke="#00ff88" stroke-width="2" />
+                        <path d="M135 100 L165 72 L275 72 L315 98 L155 100 Z" fill="#0a0a0a" stroke="#00ff88"
+                            stroke-width="1" />
+                        <circle cx="115" cy="135" r="20" fill="#111" stroke="#00ff88" stroke-width="2" />
+                        <circle cx="325" cy="135" r="20" fill="#111" stroke="#00ff88" stroke-width="2" />
+                    </svg>
+                </div>
+                <div class="model-content">
+                    <h3 class="model-name">VoltDrive Pulse</h3>
+                    <p class="model-tagline">Urban Electric Compact</p>
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="spec-value">420</span>
+                            <span class="spec-label">km Range</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="spec-value">4.5s</span>
+                            <span class="spec-label">0-100</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="spec-value">450</span>
+                            <span class="spec-label">HP</span>
+                        </div>
+                    </div>
+                    <div class="model-price">
+                        <span class="price-label">Starting at</span>
+                        <span class="price-value">$45,990</span>
+                    </div>
+                    <button class="btn btn-model">Configure Now</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="section-header">
+            <span class="section-tag">Innovation</span>
+            <h2 class="section-title">Revolutionary <span>Technology</span></h2>
+            <p class="section-subtitle">Experience cutting-edge features that define the future of driving</p>
+        </div>
+        <div class="features-container">
+            <div class="feature-showcase">
+                <div class="feature-visual">
+                    <div class="tech-circle">
+                        <div class="circle-ring ring-1"></div>
+                        <div class="circle-ring ring-2"></div>
+                        <div class="circle-ring ring-3"></div>
+                        <div class="circle-core">
+                            <span class="core-icon" id="featureIcon">🔋</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="features-list">
+                <div class="feature-item active" data-icon="🔋">
+                    <div class="feature-number">01</div>
+                    <div class="feature-content">
+                        <h3>Solid-State Battery</h3>
+                        <p>Next-generation battery technology delivering 40% more range with faster charging and
+                            enhanced safety.</p>
+                    </div>
+                    <div class="feature-expand">+</div>
+                </div>
+                <div class="feature-item" data-icon="🧠">
+                    <div class="feature-number">02</div>
+                    <div class="feature-content">
+                        <h3>AI Autopilot</h3>
+                        <p>Advanced neural network processing for full autonomous driving capabilities on highways and
+                            city streets.</p>
+                    </div>
+                    <div class="feature-expand">+</div>
+                </div>
+                <div class="feature-item" data-icon="⚡">
+                    <div class="feature-number">03</div>
+                    <div class="feature-content">
+                        <h3>Ultra-Fast Charging</h3>
+                        <p>350kW charging capability adds 400km of range in just 15 minutes at compatible stations.</p>
+                    </div>
+                    <div class="feature-expand">+</div>
+                </div>
+                <div class="feature-item" data-icon="🛡️">
+                    <div class="feature-number">04</div>
+                    <div class="feature-content">
+                        <h3>Active Safety Shield</h3>
+                        <p>360° sensor fusion with predictive collision avoidance and automatic emergency response.</p>
+                    </div>
+                    <div class="feature-expand">+</div>
+                </div>
+                <div class="feature-item" data-icon="📱">
+                    <div class="feature-number">05</div>
+                    <div class="feature-content">
+                        <h3>Connected Ecosystem</h3>
+                        <p>Seamless integration with smart home, calendar, and personalized driving preferences via app.
+                        </p>
+                    </div>
+                    <div class="feature-expand">+</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Specifications Section -->
+    <section class="specs-section" id="specs">
+        <div class="section-header">
+            <span class="section-tag">Performance</span>
+            <h2 class="section-title">Technical <span>Specifications</span></h2>
+        </div>
+        <div class="specs-tabs">
+            <button class="spec-tab active" data-tab="performance">Performance</button>
+            <button class="spec-tab" data-tab="battery">Battery</button>
+            <button class="spec-tab" data-tab="dimensions">Dimensions</button>
+            <button class="spec-tab" data-tab="technology">Technology</button>
+        </div>
+        <div class="specs-content">
+            <div class="specs-panel active" id="performance">
+                <div class="spec-grid">
+                    <div class="spec-item">
+                        <div class="spec-icon-box">
+                            <span>⚡</span>
+                        </div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">1,020 HP</span>
+                            <span class="spec-name">Peak Power</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 95%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box">
+                            <span>🔄</span>
+                        </div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">1,400 Nm</span>
+                            <span class="spec-name">Torque</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 90%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box">
+                            <span>🏎️</span>
+                        </div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">2.1 sec</span>
+                            <span class="spec-name">0-100 km/h</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 98%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box">
+                            <span>🎯</span>
+                        </div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">322 km/h</span>
+                            <span class="spec-name">Top Speed</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 85%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="specs-panel" id="battery">
+                <div class="spec-grid">
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>🔋</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">150 kWh</span>
+                            <span class="spec-name">Battery Capacity</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>🛣️</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">650 km</span>
+                            <span class="spec-name">WLTP Range</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 92%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>⚡</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">350 kW</span>
+                            <span class="spec-name">DC Fast Charging</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 95%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>⏱️</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">18 min</span>
+                            <span class="spec-name">10-80% Charge</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 88%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="specs-panel" id="dimensions">
+                <div class="spec-grid">
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>📏</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">4,970 mm</span>
+                            <span class="spec-name">Length</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>↔️</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">1,964 mm</span>
+                            <span class="spec-name">Width</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 78%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>↕️</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">1,445 mm</span>
+                            <span class="spec-name">Height</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 65%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>⚖️</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">2,185 kg</span>
+                            <span class="spec-name">Curb Weight</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 72%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="specs-panel" id="technology">
+                <div class="spec-grid">
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>🖥️</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">17" + 12"</span>
+                            <span class="spec-name">Dual Display</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>📡</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">5G + WiFi 6E</span>
+                            <span class="spec-name">Connectivity</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 95%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>🎵</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">22 Speakers</span>
+                            <span class="spec-name">Premium Audio</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 90%"></div>
+                        </div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-icon-box"><span>📍</span></div>
+                        <div class="spec-details">
+                            <span class="spec-value-lg">12 Cameras</span>
+                            <span class="spec-name">Autopilot Sensors</span>
+                        </div>
+                        <div class="spec-bar">
+                            <div class="spec-fill" style="width: 88%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2 class="cta-title">Ready to Drive the Future?</h2>
+            <p class="cta-text">Join the electric revolution. Schedule a test drive today and experience the thrill of
+                zero-emission performance.</p>
+            <div class="cta-actions">
+                <button class="btn btn-primary btn-lg">
+                    <span>Schedule Test Drive</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button class="btn btn-outline btn-lg">Contact Sales</button>
+            </div>
+        </div>
+        <div class="cta-visual">
+            <div class="charging-animation">
+                <div class="charge-port">
+                    <div class="charge-glow"></div>
+                    <div class="charge-ring"></div>
+                    <div class="charge-bolt">⚡</div>
+                </div>
+                <div class="charge-stats">
+                    <div class="charge-percent">
+                        <span id="chargeValue">0</span>%
+                    </div>
+                    <div class="charge-label">Charging</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section" id="contact">
+        <div class="section-header">
+            <span class="section-tag">Get in Touch</span>
+            <h2 class="section-title">Let's <span>Connect</span></h2>
+        </div>
+        <div class="contact-container">
+            <div class="contact-info">
+                <div class="contact-card">
+                    <div class="contact-icon">📍</div>
+                    <h4>Visit Our Showroom</h4>
+                    <p>Innovation Drive 100<br>Silicon Valley, CA 94025</p>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon">📞</div>
+                    <h4>Call Us</h4>
+                    <p>+1 (800) VOLT-DRIVE<br>Mon-Sat: 9AM-8PM</p>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon">✉️</div>
+                    <h4>Email Us</h4>
+                    <p>info@voltdrive.com<br>sales@voltdrive.com</p>
+                </div>
+            </div>
+            <form class="contact-form" id="contactForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <input type="text" id="name" required>
+                        <label for="name">Your Name</label>
+                        <div class="input-line"></div>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="email" required>
+                        <label for="email">Email Address</label>
+                        <div class="input-line"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <select id="interest" required>
+                        <option value="" disabled selected></option>
+                        <option value="apex">VoltDrive Apex</option>
+                        <option value="nova">VoltDrive Nova</option>
+                        <option value="pulse">VoltDrive Pulse</option>
+                        <option value="test-drive">Test Drive</option>
+                        <option value="other">Other Inquiry</option>
+                    </select>
+                    <label for="interest">I'm Interested In</label>
+                    <div class="input-line"></div>
+                </div>
+                <div class="form-group">
+                    <textarea id="message" rows="4" required></textarea>
+                    <label for="message">Your Message</label>
+                    <div class="input-line"></div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <span>Send Message</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <a href="#" class="logo">
+                    <span class="logo-icon">⚡</span>
+                    <span class="logo-text">VoltDrive</span>
+                </a>
+                <p>Pioneering the future of sustainable mobility with cutting-edge electric vehicles.</p>
+                <div class="social-links">
+                    <a href="#" class="social-link">𝕏</a>
+                    <a href="#" class="social-link">in</a>
+                    <a href="#" class="social-link">IG</a>
+                    <a href="#" class="social-link">YT</a>
+                </div>
+            </div>
+            <div class="footer-links">
+                <div class="footer-column">
+                    <h4>Vehicles</h4>
+                    <a href="#">VoltDrive Apex</a>
+                    <a href="#">VoltDrive Nova</a>
+                    <a href="#">VoltDrive Pulse</a>
+                    <a href="#">Compare Models</a>
+                </div>
+                <div class="footer-column">
+                    <h4>Ownership</h4>
+                    <a href="#">Charging Network</a>
+                    <a href="#">Vehicle Service</a>
+                    <a href="#">Warranty Info</a>
+                    <a href="#">Trade-In</a>
+                </div>
+                <div class="footer-column">
+                    <h4>Company</h4>
+                    <a href="#">About Us</a>
+                    <a href="#">Careers</a>
+                    <a href="#">Newsroom</a>
+                    <a href="#">Investors</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 VoltDrive. All rights reserved.</p>
+            <div class="footer-legal">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Cookie Settings</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

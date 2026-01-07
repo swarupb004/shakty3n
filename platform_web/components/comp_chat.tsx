@@ -42,6 +42,19 @@ export function AgentChat({ agentId }: AgentChatProps) {
     const [model, setModel] = useState("devstral:latest");
     const [availableModels, setAvailableModels] = useState<string[]>([]);
 
+    // Structured planning toggle
+    const [useStructuredPlanning, setUseStructuredPlanning] = useState(true);
+
+    // Progression state
+    const [progress, setProgress] = useState<{
+        percentage: number;
+        completed: number;
+        total: number;
+    } | null>(null);
+
+    // LLM thinking/current action state
+    const [currentThinking, setCurrentThinking] = useState<string | null>(null);
+
     // Confirmation state for project creation
     const [pendingProject, setPendingProject] = useState<ProjectConfig | null>(null);
 
@@ -128,23 +141,51 @@ export function AgentChat({ agentId }: AgentChatProps) {
             try {
                 const data = JSON.parse(event.data);
 
+                if (data.kind === 'workflow_progress') {
+                    const prog = data.extra?.progress;
+                    if (prog) {
+                        setProgress({
+                            percentage: prog.percentage || 0,
+                            completed: prog.completed || 0,
+                            total: prog.total || 0
+                        });
+                    }
+                }
+
+                // Show LLM thinking/terminal output
+                if (data.kind === 'terminal' || data.kind === 'agent_log') {
+                    const msg = data.message || '';
+                    // Filter out noisy messages, show meaningful ones
+                    if (msg && !msg.includes('[INFO]') && msg.length > 10) {
+                        setCurrentThinking(msg.slice(0, 150));
+                    }
+                }
+
+                // Show task execution updates
+                if (data.kind === 'task') {
+                    const title = data.extra?.title || data.message || '';
+                    if (title) {
+                        setCurrentThinking(`📋 ${title}`);
+                    }
+                }
+
                 // Handle different event types
                 if (data.kind === 'workflow_finished') {
                     const status = data.message; // 'completed' or 'failed'
                     const extra = data.extra || {};
-                    const progress = extra.progress || {};
+                    const finalProgress = extra.progress || {};
                     let content = "";
 
                     if (status === 'completed') {
-                        const tasksInfo = progress.completed && progress.total
-                            ? `${progress.completed}/${progress.total} tasks`
+                        const tasksInfo = finalProgress.completed && finalProgress.total
+                            ? `${finalProgress.completed}/${finalProgress.total} tasks`
                             : '';
                         content = `✅ **Project Created Successfully!**\n\nYour code has been generated and is ready in the workspace. Check the file explorer on the left to see your new files.\n\n${tasksInfo ? `📊 ${tasksInfo} completed` : ''}`;
                     } else {
                         // Check for partial success (code generated but low task completion)
-                        const hasProgress = progress.completed > 0;
+                        const hasProgress = finalProgress.completed > 0;
                         if (hasProgress) {
-                            content = `⚠️ **Workflow Completed with Issues**\n\nCompleted ${progress.completed}/${progress.total} tasks (${progress.percentage?.toFixed(0) || 0}%)\n\nCheck the file explorer - some files may have been generated. You can try running the workflow again or modify the request.`;
+                            content = `⚠️ **Workflow Completed with Issues**\n\nCompleted ${finalProgress.completed}/${finalProgress.total} tasks (${finalProgress.percentage?.toFixed(0) || 0}%)\n\nCheck the file explorer - some files may have been generated. You can try running the workflow again or modify the request.`;
                         } else {
                             const errorMsg = extra.error || extra.message || "Unknown error";
                             content = `❌ **Workflow Failed**\n\n${errorMsg}\n\nTry rephrasing your request or check that the AI model is responding correctly.`;
@@ -159,10 +200,18 @@ export function AgentChat({ agentId }: AgentChatProps) {
                     }]);
                     saveMessage("assistant", content);
                     setIsProcessing(false);
+                    setProgress(null); // Clear progress when done
+                    setCurrentThinking(null); // Clear thinking when done
                 }
             } catch (e) {
                 console.error("Chat WebSocket error", e);
             }
+        };
+
+        ws.onerror = () => {
+            console.error("WebSocket connection error");
+            setIsProcessing(false);
+            setProgress(null);
         };
 
         return () => {
@@ -268,6 +317,7 @@ export function AgentChat({ agentId }: AgentChatProps) {
                 description: config.description || "Create a new project",
                 project_type: projectType,
                 requirements: config.requirements || {},
+                use_structured_planning: useStructuredPlanning,
             });
 
             const sysMsg: Message = {
@@ -368,8 +418,33 @@ export function AgentChat({ agentId }: AgentChatProps) {
                             </select>
                         </div>
 
+                        {/* Structured Planning Toggle */}
+                        <div className="pt-2 border-t border-white/10">
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <div>
+                                    <div className="text-xs text-neutral-400">Structured Planning</div>
+                                    <div className="text-[10px] text-neutral-600">7-phase AI planning for better results</div>
+                                </div>
+                                <button
+                                    onClick={() => setUseStructuredPlanning(!useStructuredPlanning)}
+                                    className={cn(
+                                        "relative w-10 h-5 rounded-full transition-colors",
+                                        useStructuredPlanning ? "bg-cyan-600" : "bg-neutral-700"
+                                    )}
+                                >
+                                    <span
+                                        className={cn(
+                                            "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                                            useStructuredPlanning ? "translate-x-5" : "translate-x-0.5"
+                                        )}
+                                    />
+                                </button>
+                            </label>
+                        </div>
+
                         <div className="text-[10px] text-neutral-600 pt-1">
                             Active: <span className="text-cyan-400">{currentProviderLabel} / {model}</span>
+                            {useStructuredPlanning && <span className="ml-2 text-green-400">• Structured</span>}
                         </div>
                     </div>
                 )}
@@ -426,11 +501,34 @@ export function AgentChat({ agentId }: AgentChatProps) {
                         <div className="w-8 h-8 rounded-full bg-cyan-600/20 flex items-center justify-center shrink-0">
                             <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
                         </div>
-                        <div className="text-neutral-500 text-xs flex items-center">
-                            Thinking...
+                        <div className="flex flex-col gap-2 w-full max-w-[300px]">
+                            <div className="text-neutral-500 text-xs flex items-center">
+                                {progress ? `Building: ${progress.completed}/${progress.total} tasks` : "Processing..."}
+                            </div>
+                            {currentThinking && (
+                                <div className="text-[10px] text-cyan-400/70 italic truncate">
+                                    🤔 {currentThinking}
+                                </div>
+                            )}
+                            <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                                {progress ? (
+                                    <div
+                                        className="h-full bg-cyan-500 transition-all duration-500"
+                                        style={{ width: `${progress.percentage}%` }}
+                                    />
+                                ) : (
+                                    <div className="h-full w-1/3 bg-gradient-to-r from-cyan-500 to-cyan-300 rounded-full animate-[shimmer_1.5s_infinite]" />
+                                )}
+                            </div>
+                            {progress && (
+                                <div className="text-[9px] text-neutral-400">
+                                    {progress.percentage.toFixed(0)}% complete
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
+
             </div>
 
             <div className="p-3 border-t border-white/10 bg-neutral-900">
